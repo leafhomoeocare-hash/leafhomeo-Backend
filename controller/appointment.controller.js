@@ -933,13 +933,53 @@ exports.Review = async (req, res) => {
 exports.SubmitConsultation = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { appointmentId, notes, callDuration } = req.body;
+    const {
+      appointmentId,
+      chiefComplaints,
+      appetite,
+      thirst,
+      desire,
+      aversion,
+      habits,
+      stool,
+      urine,
+      perspiration,
+      menWomen,
+      sleep,
+      dream,
+      thermal,
+      amelioration,
+      aggravation,
+      otherComplaints,
+      levelsOfHealth,
+      perception,
+      callDuration
+    } = req.body;
 
-    if (!appointmentId || !notes) {
+    console.log('Submit consultation request body:', req.body);
+    console.log('Files:', req.files);
+
+    if (!appointmentId || !chiefComplaints) {
       return res.status(400).json({
         status: 0,
-        message: "Appointment ID and notes are required",
+        message: "Appointment ID and chief complaints are required",
       });
+    }
+
+    // Handle screenshots - store file paths
+    let screenshotPaths = [];
+    if (req.files && req.files.length > 0) {
+      screenshotPaths = req.files.map(file => `/uploads/${file.filename}`);
+    }
+
+    // Parse existing screenshots from frontend
+    let existingScreenshots = [];
+    if (req.body.existingScreenshots) {
+      try {
+        existingScreenshots = JSON.parse(req.body.existingScreenshots);
+      } catch (e) {
+        console.error("Error parsing existing screenshots:", e);
+      }
     }
 
     const doctor = await Doctor.findOne({
@@ -959,7 +999,18 @@ exports.SubmitConsultation = async (req, res) => {
         doctorId: doctor.id,
       },
       include: [
-        { model: Patient, as: "patient", attributes: ["id", "userId"] }
+        { 
+          model: Patient, 
+          as: "patient", 
+          attributes: ["id", "userId"],
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "name", "mobile", "email"]
+            }
+          ]
+        }
       ]
     });
 
@@ -976,9 +1027,67 @@ exports.SubmitConsultation = async (req, res) => {
     });
 
     if (existingConsultation) {
-      return res.status(400).json({
-        status: 0,
-        message: "Consultation already submitted for this appointment",
+      // Merge existing screenshots with new ones
+      let allScreenshots = [...existingScreenshots];
+      
+      // Add new screenshots
+      if (screenshotPaths.length > 0) {
+        allScreenshots = [...allScreenshots, ...screenshotPaths];
+      }
+
+      // Update existing consultation
+      await existingConsultation.update({
+        chiefComplaints,
+        appetite,
+        thirst,
+        desire,
+        aversion,
+        habits,
+        stool,
+        urine,
+        perspiration,
+        menWomen,
+        sleep,
+        dream,
+        thermal,
+        amelioration,
+        aggravation,
+        otherComplaints,
+        levelsOfHealth,
+        perception: perception || existingConsultation.perception,
+        screenshots: allScreenshots.length > 0 ? JSON.stringify(allScreenshots) : null,
+        callDuration: callDuration || existingConsultation.callDuration,
+      });
+
+      // Return updated consultation with patient details
+      const consultationWithPatient = await Consultation.findOne({
+        where: { id: existingConsultation.id },
+        include: [
+          {
+            model: Patient,
+            as: "patient",
+            attributes: ["id", "userId", "houseNumber", "addressLine1", "addressLine2", "landmark", "city", "state", "pincode", "country"],
+            include: [
+              {
+                model: User,
+                as: "user",
+                attributes: ["id", "name", "mobile", "email"]
+              }
+            ]
+          }
+        ]
+      });
+
+      // Update appointment with consultationId
+      await Appointment.update(
+        { consultationId: existingConsultation.id },
+        { where: { id: appointmentId } }
+      );
+
+      return res.status(200).json({
+        status: 1,
+        message: "Consultation updated successfully",
+        data: consultationWithPatient,
       });
     }
 
@@ -987,18 +1096,158 @@ exports.SubmitConsultation = async (req, res) => {
       appointmentId,
       doctorId: doctor.id,
       patientId: appointment.patientId,
-      notes,
+      chiefComplaints,
+      appetite,
+      thirst,
+      desire,
+      aversion,
+      habits,
+      stool,
+      urine,
+      perspiration,
+      menWomen,
+      sleep,
+      dream,
+      thermal,
+      amelioration,
+      aggravation,
+      otherComplaints,
+      levelsOfHealth,
+      perception: perception || null,
+      screenshots: screenshotPaths.length > 0 ? JSON.stringify(screenshotPaths) : null,
       callDuration: callDuration || null,
-      pdfGenerated: true,
     });
+
+    // Return consultation with patient details for admin
+    const consultationWithPatient = await Consultation.findOne({
+      where: { id: consultation.id },
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+          attributes: ["id", "userId", "houseNumber", "addressLine1", "addressLine2", "landmark", "city", "state", "pincode", "country"],
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "name", "mobile", "email"]
+            }
+          ]
+        }
+      ]
+    });
+
+    // Update appointment with consultationId
+    await Appointment.update(
+      { consultationId: consultation.id },
+      { where: { id: appointmentId } }
+    );
 
     return res.status(201).json({
       status: 1,
       message: "Consultation submitted successfully",
-      data: consultation,
+      data: consultationWithPatient,
     });
   } catch (error) {
     console.error("Error submitting consultation:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+exports.getConsultationById = async (req, res) => {
+  try {
+    const { consultationId } = req.params;
+
+    const consultation = await Consultation.findOne({
+      where: { id: consultationId },
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+          attributes: ["id", "userId", "houseNumber", "addressLine1", "addressLine2", "landmark", "city", "state", "pincode", "country"],
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "name", "mobile", "email"]
+            }
+          ]
+        },
+        {
+          model: Appointment,
+          as: "appointment",
+          attributes: ["id", "appointmentId", "appointmentDateTime", "status"]
+        }
+      ]
+    });
+
+    if (!consultation) {
+      return res.status(404).json({
+        status: 0,
+        message: "Consultation not found",
+      });
+    }
+
+    return res.status(200).json({
+      status: 1,
+      message: "Consultation retrieved successfully",
+      data: consultation,
+    });
+  } catch (error) {
+    console.error("Error getting consultation:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+exports.getConsultationByAppointmentId = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+
+    const consultation = await Consultation.findOne({
+      where: { appointmentId },
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+          attributes: ["id", "userId", "houseNumber", "addressLine1", "addressLine2", "landmark", "city", "state", "pincode", "country"],
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "name", "mobile", "email"]
+            }
+          ]
+        },
+        {
+          model: Appointment,
+          as: "appointment",
+          attributes: ["id", "appointmentId", "appointmentDateTime", "status"]
+        }
+      ]
+    });
+
+    if (!consultation) {
+      return res.status(404).json({
+        status: 0,
+        message: "Consultation not found",
+      });
+    }
+
+    return res.status(200).json({
+      status: 1,
+      message: "Consultation retrieved successfully",
+      data: consultation,
+    });
+  } catch (error) {
+    console.error("Error getting consultation by appointment:", error);
     return res.status(500).json({
       status: 0,
       message: "Internal server error",

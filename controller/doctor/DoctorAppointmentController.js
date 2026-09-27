@@ -6,7 +6,7 @@ const Sequelize = require("sequelize");
 const twilio = require('twilio');
 const admin = require("../../config/firebase")
 
-const { User, Doctor, Patient, Appointment, Payment, Availability, Review } = require("../../models");
+const { User, Doctor, Patient, Appointment, Payment, Availability, Review, Consultation } = require("../../models");
 
 
 exports.AddAvailability = async (req, res) => {
@@ -573,6 +573,11 @@ exports.GetDoctorAppointments = async (req, res) => {
               attributes: ["name", "image", "email", "mobile"]
             }
           ]
+        },
+        {
+          model: Consultation,
+          as: "consultation",
+          attributes: ["id"]
         }
       ],
       order: [["appointmentDateTime", "DESC"]]
@@ -590,7 +595,8 @@ exports.GetDoctorAppointments = async (req, res) => {
       status: apt.status,
       reason: apt.reason,
       requestType: apt.requestType,
-      acceptedAt: apt.acceptedAt
+      acceptedAt: apt.acceptedAt,
+      consultationId: apt.consultation?.id || null
     }));
 
     return res.status(200).json({

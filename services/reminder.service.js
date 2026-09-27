@@ -218,17 +218,64 @@ const sendPaymentReminders = async () => {
 };
 
 /**
+ * Cancel pending appointments after 45 minutes
+ */
+const cancelPendingAppointments = async () => {
+  try {
+    console.log('Checking pending appointments for cancellation...');
+
+    const now = new Date();
+
+    // Get pending appointments that are past their time
+    const appointments = await Appointment.findAll({
+      where: {
+        status: 'pending',
+        appointmentDateTime: {
+          [Op.lt]: now
+        }
+      }
+    });
+
+    console.log(`Found ${appointments.length} pending appointments past their time`);
+
+    for (const appointment of appointments) {
+      const appointmentTime = new Date(appointment.appointmentDateTime);
+      const minutesPassed = (now - appointmentTime) / (1000 * 60);
+
+      // Cancel after 45 minutes
+      if (minutesPassed >= 45) {
+        await Appointment.update(
+          {
+            status: 'cancelled',
+            cancellationReason: 'timeout_pending'
+          },
+          { where: { id: appointment.id } }
+        );
+
+        console.log(`Cancelled pending appointment ${appointment.id} after ${Math.floor(minutesPassed)} minutes`);
+      }
+    }
+
+    console.log('Pending appointment cancellation check completed');
+  } catch (error) {
+    console.error('Error canceling pending appointments:', error);
+  }
+};
+
+/**
  * Run all reminder checks
  */
 const runReminderChecks = async () => {
   console.log('Running reminder checks at:', new Date().toISOString());
   await sendAppointmentReminders();
   await sendPaymentReminders();
+  await cancelPendingAppointments();
   console.log('Reminder checks completed');
 };
 
 module.exports = {
   sendAppointmentReminders,
   sendPaymentReminders,
+  cancelPendingAppointments,
   runReminderChecks
 };

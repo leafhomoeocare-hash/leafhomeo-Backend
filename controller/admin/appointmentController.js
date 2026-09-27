@@ -5,6 +5,7 @@ const Doctor = require("../../models/Doctor");
 const Appointment = require("../../models/Appointment");
 const Patient = require("../../models/Patient");
 const Payment = require("../../models/Payment");
+const Consultation = require("../../models/Consultation");
 
 const { Op } = require("sequelize");
 const nodemailer = require("nodemailer");
@@ -47,6 +48,11 @@ exports.GetAppointments = async (req, res, next) => {
           model: Payment,
           as: "payment",
           attributes: ["id", "amount", "gateway", "status", "paidAt"],
+        },
+        {
+          model: Consultation,
+          as: "consultation",
+          attributes: ["id", "chiefComplaints", "perception", "callDuration"],
         },
       ],
       // 2. Dynamic Search Path adjusted as per your exact aliases
@@ -126,6 +132,14 @@ exports.GetAppointments = async (req, res, next) => {
             gateway: appt.payment.gateway,
             status: appt.payment.status,
             paidAt: appt.payment.paidAt,
+          }
+        : null,
+      consultation: appt.consultation
+        ? {
+            id: appt.consultation.id,
+            chiefComplaints: appt.consultation.chiefComplaints,
+            perception: appt.consultation.perception,
+            callDuration: appt.consultation.callDuration,
           }
         : null,
     }));

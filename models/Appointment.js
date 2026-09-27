@@ -57,6 +57,19 @@ const Appointment = sequelize.define(
       defaultValue: "pending",
     },
 
+    cancellationReason: {
+      type: DataTypes.ENUM(
+        "timeout_pending",
+        "timeout_paid",
+        "no_show_both",
+        "doctor_no_show",
+        "patient_no_show",
+        "manual_doctor",
+        "manual_patient"
+      ),
+      allowNull: true,
+    },
+
     acceptedAt: {
       type: DataTypes.DATE,
       allowNull: true,
@@ -98,12 +111,28 @@ const Appointment = sequelize.define(
     courierName: {
       type: DataTypes.STRING,
       allowNull: true,
-    }
+    },
+
+    consultationId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "consultations",
+        key: "id",
+      },
   },
+},
   {
     tableName: "appointments",
     timestamps: true,
+    indexes: [
+      {
+        unique: true,
+        fields: ['appointmentId']
+      }
+    ]
   }
+
 );
 
 module.exports = Appointment;

@@ -279,16 +279,29 @@ exports.GetUser = async (req, res) => {
 };
 exports.ChangePassword = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user?.id;
         const { oldPassword, newPassword } = req.body;
+
+        console.log("BODY:", req.body);
+        
+        // 1. Validation check
         if (!oldPassword || !newPassword) {
             return res.status(400).json({
                 status: 0,
                 message: "Old password and new password are required",
             });
         }
-        const user = await User.findByPk(userId);
 
+        // 2. User existence check
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({
+                status: 0,
+                message: "User not found",
+            });
+        }
+
+        // 3. Password match check
         const isMatch = await bcrypt.compare(oldPassword, user.password);
         if (!isMatch) {
             return res.status(400).json({
@@ -297,10 +310,8 @@ exports.ChangePassword = async (req, res) => {
             });
         }
 
-        // Hash new password
+        // 4. Hash and update
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-        // Update user password
         await user.update({ password: hashedNewPassword });
 
         return res.status(200).json({
@@ -315,7 +326,7 @@ exports.ChangePassword = async (req, res) => {
             message: "Something went wrong",
         });
     }
-  };
+};
 
 exports.UpdateProfile = async (req, res) => {
   const transaction = await sequelize.transaction();

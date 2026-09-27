@@ -84,6 +84,18 @@ Payment.belongsTo(Appointment, {
   foreignKey: "appointmentId",
   as: "appointment",
 });
+
+// Appointment relations with consultation
+Appointment.hasOne(Consultation, {
+  foreignKey: "appointmentId",
+  as: "consultation",
+});
+
+Consultation.belongsTo(Appointment, {
+  foreignKey: "appointmentId",
+  as: "appointment",
+});
+
 User.hasMany(Notification, {
   foreignKey: "userId",
   as: "notifications",
@@ -150,17 +162,6 @@ Appointment.hasOne(Review, {
 });
 
 Review.belongsTo(Appointment, {
-  foreignKey: "appointmentId",
-  as: "appointment",
-});
-
-// Consultation relations
-Appointment.hasOne(Consultation, {
-  foreignKey: "appointmentId",
-  as: "consultation",
-});
-
-Consultation.belongsTo(Appointment, {
   foreignKey: "appointmentId",
   as: "appointment",
 });

@@ -75,7 +75,7 @@ try {
         {
           model: User,
           as: "user",
-          attributes: [],
+          attributes: ["isPasswordSet"],
         },
       ],
       attributes: [
@@ -86,12 +86,21 @@ try {
         "consultationFee",
         [Sequelize.col("user.name"), "name"],
         [Sequelize.col("user.image"), "image"],
+        [Sequelize.col("user.isPasswordSet"), "isPasswordSet"],
       ],
       order: [["createdAt", "DESC"]],
     });
 
+    // Filter out doctors who haven't set their password
+    const verifiedDoctors = expertDoctors.filter(doctor => {
+      // Safely access isPasswordSet from dataValues or nested user
+      const isPasswordSet = doctor.dataValues?.isPasswordSet || 
+                            (doctor.get ? doctor.get('isPasswordSet') : undefined);
+      return isPasswordSet === true;
+    });
+
     // Get all doctor ids
-    const doctorIds = expertDoctors.map(d => d.id);
+    const doctorIds = verifiedDoctors.map(d => d.id);
 
     // Get ratings for all doctors
     const ratings = await Review.findAll({
@@ -116,9 +125,10 @@ try {
     });
 
     // Add ratings to expert doctors
-    const doctorsWithRatings = expertDoctors.map(doctor => ({
+    const doctorsWithRatings = verifiedDoctors.map(doctor => ({
       ...doctor.toJSON(),
       averageRating: ratingMap[doctor.id]?.averageRating || "0.0",
+      
       totalReviews: ratingMap[doctor.id]?.totalReviews || 0,
     }));
 console.log(doctorsWithRatings,"DOCTORS");
@@ -279,16 +289,25 @@ if (!patient) {
     
 
     const topDoctors = await Doctor.findAll({
-      where: { IsExpert: true },
+      where: { 
+        IsExpert: true
+      },
       limit: 5,
       attributes: ["id", "specialization", "experience"],
       include: [
         {
           model: User,
           as: "user",
-          attributes: ["name", "image"],
+          attributes: ["name", "image", "isPasswordSet"],
         },
       ],
+    });
+
+    // Filter out doctors who haven't set their password
+    const verifiedTopDoctors = topDoctors.filter(doctor => {
+      // Safely access nested user data
+      const isPasswordSet = doctor.get ? doctor.get('user')?.get('isPasswordSet') : doctor.user?.isPasswordSet;
+      return isPasswordSet === true;
     });
 
     // Get all doctor ids
@@ -297,7 +316,7 @@ if (!patient) {
         ...appointments
           .filter((a) => a.doctor)
           .map((a) => a.doctor.id),
-        ...topDoctors.map((d) => d.id),
+        ...verifiedTopDoctors.map((d) => d.id),
       ]),
     ];
 

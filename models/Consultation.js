@@ -33,34 +33,87 @@ const Consultation = sequelize.define(
         key: "id",
       },
     },
-    notes: {
-      type: DataTypes.TEXT,
-      allowNull: false,
-    },
-    diagnosis: {
+    chiefComplaints: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    prescription: {
+    appetite: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    followUpDate: {
-      type: DataTypes.DATE,
+    thirst: {
+      type: DataTypes.TEXT,
       allowNull: true,
+    },
+    desire: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    aversion: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    habits: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    stool: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    urine: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    perspiration: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    menWomen: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    sleep: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    dream: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    thermal: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    amelioration: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    aggravation: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    otherComplaints: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    levelsOfHealth: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    perception: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    screenshots: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "JSON array of screenshot file paths",
     },
     callDuration: {
       type: DataTypes.INTEGER,
       allowNull: true,
       comment: "Duration in seconds",
-    },
-    pdfGenerated: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-    pdfPath: {
-      type: DataTypes.STRING,
-      allowNull: true,
     },
   },
   {
