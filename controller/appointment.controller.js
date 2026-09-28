@@ -11,6 +11,7 @@ const { AccessToken } = twilio.jwt;
 const { VideoGrant } = AccessToken;
 const Notification = require("../models/Notification");
 const shiprocketService = require("../services/shiprocket.service");
+const sequelize = require("../config/database");
 
 exports.AvailabilitySlots = async (req,res,next )=>{
   try {
