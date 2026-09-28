@@ -135,204 +135,6 @@ exports.AppointmentBooking = async (req, res, next) => {
     console.log("Request Body Received:", JSON.stringify(req.body, null, 2));
 
     if (!requestType || !appointmentDateTime) {
-      console.log("❌ ERROR: Required fields missing (requestType or appointmentDateTime)");
-      await transaction.rollback();
-      return res.status(400).json({
-        status: 0,
-        message: "Required fields are missing",
-      });
-    }
-
-    if (requestType === "specific_doctor" && !doctorId) {
-      console.log("❌ ERROR: Doctor ID is missing for specific_doctor request");
-      await transaction.rollback();
-      return res.status(400).json({
-        status: 0,
-        message: "Doctor ID is required for specific doctor request",
-      });
-    }
-
-    if (requestType === "specific_doctor") {
-      const doctor = await Doctor.findByPk(doctorId, { transaction });
-      if (!doctor) {
-        console.log("❌ ERROR: Doctor not found with ID:", doctorId);
-        await transaction.rollback();
-        return res.status(404).json({
-          status: 0,
-          message: "Doctor not found",
-        });
-      }
-
-      const appointmentDate = new Date(appointmentDateTime);
-
-      const daysOfWeek = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-      ];
-      const dayOfWeek = daysOfWeek[appointmentDate.getUTCDay()];
-
-      const hours = String(appointmentDate.getUTCHours()).padStart(2, "0");
-      const minutes = String(appointmentDate.getUTCMinutes()).padStart(2, "0");
-      const slotTime = `${hours}:${minutes}`;
-
-      console.log("--- PARSED DATE & TIME (UTC) ---");
-      console.log("Calculated Day Of Week:", dayOfWeek);
-      console.log("Calculated Slot Time (HH:mm):", slotTime);
-
-      // Check slot availability
-      const availabilitySlot = await Availability.findOne({
-        where: {
-          doctorId,
-          dayOfWeek,
-          startTime: slotTime,
-          isAvailable: true,
-        },
-        transaction,
-      });
-
-      console.log("Database Search Criteria for Availability:", {
-        doctorId,
-        dayOfWeek,
-        startTime: slotTime,
-        isAvailable: true,
-      });
-      console.log("Availability Record Found in DB:", availabilitySlot ? "YES" : "NO");
-
-      if (!availabilitySlot) {
-        console.log("❌ ERROR 400: Time slot is not available in Doctor's Availability table!");
-        await transaction.rollback();
-        return res.status(400).json({
-          status: 0,
-          message: "Selected time slot is not available for this doctor",
-        });
-      }
-
-      // Check if already booked
-      const existingAppointment = await Appointment.findOne({
-        where: {
-          doctorId,
-          appointmentDateTime: new Date(appointmentDateTime),
-          status: { [Op.notIn]: ["cancelled"] },
-        },
-        transaction,
-      });
-
-      console.log("Existing Active Booking Found:", existingAppointment ? "YES" : "NO");
-
-      if (existingAppointment) {
-        console.log("❌ ERROR 400: Time slot is already booked by another appointment!");
-        await transaction.rollback();
-        return res.status(400).json({
-          status: 0,
-          message: "This time slot is already booked",
-        });
-      }
-    }
-
-    // Create Appointment
-    const appointment = await Appointment.create(
-      {
-        patientId,
-        doctorId: requestType === "specific_doctor" ? doctorId : null,
-        requestType,
-        appointmentDateTime,
-        reason,
-      },
-      { transaction }
-    );
-
-    appointment.appointmentId = `APT-${String(appointment.id).padStart(5, "0")}`;
-    await appointment.save({ transaction });
-
-    console.log("✅ Appointment Created Successfully ID:", appointment.appointmentId);
-
-    // Notifications
-    if (requestType === "specific_doctor") {
-      const doctor = await Doctor.findByPk(doctorId, { transaction });
-
-      await Notification.create(
-        {
-          userId: doctor.userId,
-          senderId: userId,
-          title: "New Appointment Request",
-          message: "You have received a new appointment request.",
-          type: "appointment",
-          referenceId: appointment.id,
-        },
-        { transaction }
-      );
-      console.log("Notification sent to doctor userId:", doctor.userId);
-    } else if (requestType === "any_doctor") {
-      const doctors = await Doctor.findAll({
-        attributes: ["userId"],
-        transaction,
-      });
-
-      const notifications = doctors.map((doc) => ({
-        userId: doc.userId,
-        senderId: userId,
-        title: "New Appointment Request",
-        message: "A patient has requested a consultation.",
-        type: "appointment",
-        referenceId: appointment.id,
-        isRead: false,
-      }));
-
-      await Notification.bulkCreate(notifications, { transaction });
-      console.log(`Notifications sent to ${doctors.length} doctors`);
-    }
-
-    await transaction.commit();
-    console.log("--- SUCCESS: TRANSACTION COMMITTED ---");
-
-    return res.status(201).json({
-      status: 1,
-      message: "Appointment booked successfully",
-      data: appointment,
-    });
-  } catch (error) {
-    await transaction.rollback();
-    console.error("❌ CRITICAL ERROR IN APPOINTMENT BOOKING:", error);
-
-    return res.status(500).json({
-      status: 0,
-      message: "Something went wrong",
-      errorDetails: error.message,
-    });
-  }
-};
-exports.AppointmentBooking = async (req, res, next) => {
-  const transaction = await sequelize.transaction();
-
-  try {
-    const userId = req.user.id;
-    console.log("--- START APPOINTMENT BOOKING ---");
-    console.log("Patient User ID from token:", userId);
-
-    const patient = await Patient.findOne({
-      where: { userId },
-      transaction,
-    });
-
-    if (!patient) {
-      console.log("❌ ERROR: Patient profile not found for userId:", userId);
-      await transaction.rollback();
-      return res.status(404).json({
-        status: 0,
-        message: "Patient profile not found",
-      });
-    }
-
-    const patientId = patient.id;
-    const { doctorId, requestType, appointmentDateTime, reason } = req.body;
-    console.log("Request Body Received:", JSON.stringify(req.body, null, 2));
-
-    if (!requestType || !appointmentDateTime) {
       console.log("❌ ERROR: Required fields missing");
       await transaction.rollback();
       return res.status(400).json({
@@ -494,6 +296,165 @@ exports.AppointmentBooking = async (req, res, next) => {
       errorDetails: error.message,
     });
   }
+};
+exports.UpcomingAppointments = async (req, res) => {
+  try {
+
+    const userId = req.user.id;
+
+    const patient = await Patient.findOne({
+      where: { userId }
+    });
+
+    if (!patient) {
+      return res.status(404).json({
+        status: 0,
+        message: "Patient profile not found",
+      });
+    }
+
+    const appointments = await Appointment.findAll({
+
+      where: {
+
+        patientId: patient.id,
+
+        appointmentDateTime: {
+          [Op.gte]: new Date(),
+        },
+
+        status: {
+          [Op.notIn]: [
+            "cancelled",
+            "completed",
+            "rejected",
+            "pending"
+          ]
+        }
+
+      },
+
+      include: [
+
+        {
+
+          model: Doctor,
+
+          as: "doctor",
+
+          attributes: [
+
+            "id",
+            "userId",
+            "specialization",
+            "experience",
+            "qualification",
+            "consultationFee"
+
+          ],
+
+          include: [
+
+            {
+
+              model: User,
+
+              as: "user",
+
+              attributes: [
+
+                "name",
+                "image"
+
+              ]
+
+            }
+
+          ]
+
+        }
+
+      ],
+
+      order: [
+
+        ["appointmentDateTime", "ASC"]
+
+      ]
+
+    });
+
+    const data = appointments.map(item => ({
+
+      appointmentId:
+        item.id,
+
+      appointmentDateTime:
+        item.appointmentDateTime,
+
+      status:
+        item.status,
+
+      acceptedAt:
+        item.acceptedAt,
+
+      reason:
+        item.reason,
+
+      doctorId:
+        item.doctor?.id,
+
+      doctorUserId:
+        item.doctor?.userId,
+
+      doctorName:
+        item.doctor?.user?.name,
+
+      doctorImage:
+        item.doctor?.user?.image ? `http://localhost:5000/${item.doctor?.user?.image}` : null,
+
+      specialization:
+        item.doctor?.specialization,
+
+      experience:
+        item.doctor?.experience,
+
+      qualification:
+        item.doctor?.qualification,
+
+      consultationFee:
+        item.doctor?.consultationFee
+
+    }));
+
+    return res.status(200).json({
+
+      status: 1,
+
+      message:
+        "Upcoming appointments retrieved successfully",
+
+      data
+
+    });
+
+  }
+
+  catch (error) {
+
+    console.log(error);
+
+    return res.status(500).json({
+
+      status: 0,
+
+      message:
+        "Something went wrong"
+
+    });
+
+  }
+
 };
 exports.myAppointments = async (req, res) => {
   try {
