@@ -120,7 +120,15 @@ const Appointment = sequelize.define(
         model: "consultations",
         key: "id",
       },
-  },
+    },
+    patientEndedCall: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    doctorEndedCall: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
 },
   {
     tableName: "appointments",

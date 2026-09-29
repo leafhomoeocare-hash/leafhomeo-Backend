@@ -773,9 +773,19 @@ exports.EndVideoCall = async (req, res) => {
       });
     }
 
-    // Complete the appointment
-    appointment.status = 'completed';
-    appointment.completedAt = new Date();
+    // Mark which user ended the call
+    if (isPatient) {
+      appointment.patientEndedCall = true;
+    } else if (isDoctor) {
+      appointment.doctorEndedCall = true;
+    }
+
+    // Only complete appointment if both parties have ended the call
+    if (appointment.patientEndedCall && appointment.doctorEndedCall) {
+      appointment.status = 'completed';
+      appointment.completedAt = new Date();
+    }
+
     await appointment.save();
 
     // Clean up Twilio room (optional - rooms auto-expire)
@@ -795,7 +805,9 @@ exports.EndVideoCall = async (req, res) => {
 
     return res.status(200).json({
       status: 1,
-      message: "Video call ended successfully.",
+      message: appointment.patientEndedCall && appointment.doctorEndedCall 
+        ? "Video call ended successfully. Appointment completed."
+        : "Video call ended. Waiting for other participant to end the call.",
       data: appointment
     });
 
