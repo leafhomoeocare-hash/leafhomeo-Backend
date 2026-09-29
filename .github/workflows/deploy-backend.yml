@@ -14,10 +14,12 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
           script: |
             export PATH=/root/.nvm/versions/node/v24.21.0/bin:$PATH
             cd /root/Leaf-Homeo-Care
             git fetch origin
             git reset --hard origin/main
             npm install
-            pm2 restart leaf-homeo
+            pm2 restart leaf-backend --update-env || pm2 start npm --name leaf-backend -- start
+            pm2 save
