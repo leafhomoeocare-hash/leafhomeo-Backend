@@ -217,7 +217,9 @@ appointment.roomName = `room_${appointmentId}_${Date.now()}`;
             type: 'group',
             enableTurn: true,
             maxParticipants: 2,
-            recordParticipantsOnConnect: false
+            recordParticipantsOnConnect: false,
+            // Allow reconnection after disconnect
+            emptyRoomTimeout: 60 // 60 seconds before room auto-closes when empty
           });
           console.log(`Twilio room created: ${appointment.roomName}`);
         } else {

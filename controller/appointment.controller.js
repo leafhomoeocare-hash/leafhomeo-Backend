@@ -789,14 +789,17 @@ exports.EndVideoCall = async (req, res) => {
     await appointment.save();
 
     // Clean up Twilio room (optional - rooms auto-expire)
+    // Only clean up room if both parties have ended the call and appointment is completed
     try {
-      const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      const room = await twilioClient.video.v1.rooms(appointment.roomName).fetch();
-      
-      // Only complete the room if both participants have left
-      if (room && room.status === 'in-progress' && room.participants.size === 0) {
-        await twilioClient.video.v1.rooms(appointment.roomName).update({ status: 'completed' });
-        console.log(`Twilio room ${appointment.roomName} completed`);
+      if (appointment.patientEndedCall && appointment.doctorEndedCall) {
+        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        const room = await twilioClient.video.v1.rooms(appointment.roomName).fetch();
+        
+        // Only complete the room if both participants have left and appointment is completed
+        if (room && room.status === 'in-progress' && room.participants.size === 0) {
+          await twilioClient.video.v1.rooms(appointment.roomName).update({ status: 'completed' });
+          console.log(`Twilio room ${appointment.roomName} completed after both parties ended call`);
+        }
       }
     } catch (roomError) {
       console.log('Room cleanup note:', roomError.message);
