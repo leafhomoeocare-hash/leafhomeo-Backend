@@ -2,13 +2,18 @@ name: Deploy Backend
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Deploy via SSH
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -17,12 +22,17 @@ jobs:
           script_stop: true
           script: |
             export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              . "$NVM_DIR/nvm.sh"
+            fi
+            
+            export PATH=$PATH:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:/usr/local/bin:/usr/bin
 
-            cd /root/leafhomeo-Backend
+            cd /root/leafhomeo-Backend || cd ~/leafhomeo-Backend
             git fetch origin main
             git reset --hard origin/main
+
             npm ci --omit=dev
 
-            pm2 restart leafhomeo-api --update-env || pm2 start npm --name leafhomeo-api -- start
+            pm2 restart leafhomeo-api --update-env || pm2 start npm --name "leafhomeo-api" -- start
             pm2 save
