@@ -21,16 +21,22 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -n 1)/bin
             
-            export PATH=$PATH:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:/usr/local/bin:/usr/bin
+            # Navigate to project folder (creates directory if it doesn't exist)
+            TARGET_DIR=$(eval echo ~$USER)/leafhomeo-Backend
+            if [ ! -d "$TARGET_DIR" ]; then
+              TARGET_DIR="/root/leafhomeo-Backend"
+            fi
+            cd "$TARGET_DIR"
 
-            cd /root/leafhomeo-Backend || cd ~/leafhomeo-Backend
+            # Pull latest changes
             git fetch origin main
             git reset --hard origin/main
 
+            # Install dependencies using node path directly
             npm ci --omit=dev
 
+            # Reload PM2 application
             pm2 restart leafhomeo-api --update-env || pm2 start npm --name "leafhomeo-api" -- start
             pm2 save
