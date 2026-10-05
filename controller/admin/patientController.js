@@ -10,7 +10,9 @@ exports.GetAllPatients = async (req, res, next) => {
 
     const offset = (page - 1) * Number(limit);
 
-    const where = {};
+    const where = {
+      isDeleted: false,
+    };
 
     if (search) {
       where[Op.or] = [
@@ -38,6 +40,9 @@ Sequelize.where(
           as: "user",
           attributes: ["name", "email", "mobile", "image"],
           required: false,
+          where: {
+            isDeleted: false,
+          },
         },
       ],
 
@@ -69,10 +74,8 @@ exports.DeletePatient = async (req, res, next) => {
   try {
     const { patientId } = req.body;
     console.log(patientId);
-    
-    
 
-const patient = await Patient.findByPk(patientId);
+    const patient = await Patient.findByPk(patientId);
     if (!patient) {
       return res.status(404).json({
         status: 0,
@@ -81,19 +84,27 @@ const patient = await Patient.findByPk(patientId);
     }
 
     console.log(patient);
-    
+
     const userId = patient.userId;
-    console.log(userId,"user");
-    
+    console.log(userId, "user");
 
-
-    await patient.destroy();
-
-    await User.destroy({
-      where: {
-        id: userId,
-      },
+    // Soft delete - mark as deleted instead of destroying
+    await patient.update({
+      isDeleted: true,
+      deletedAt: new Date(),
     });
+
+    await User.update(
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+      {
+        where: {
+          id: userId,
+        },
+      }
+    );
 
     return res.status(200).json({
       status: 1,
@@ -128,7 +139,11 @@ exports.UpdatePatient = async (req, res, next) => {
     console.log(req.body,"BODY");
     
 
-    const patient = await Patient.findByPk(id);
+    const patient = await Patient.findByPk(id, {
+      where: {
+        isDeleted: false,
+      },
+    });
 
 if (!patient) {
   return res.status(404).json({
@@ -137,7 +152,11 @@ if (!patient) {
   });
 }
 
-const user = await User.findByPk(patient.userId);
+const user = await User.findByPk(patient.userId, {
+  where: {
+    isDeleted: false,
+  },
+});
 
 if (!user) {
   return res.status(404).json({
@@ -155,6 +174,7 @@ if (!user) {
             ...(mobile ? [{ mobile }] : []),
           ],
           id: { [Op.ne]: patient.userId },
+          isDeleted: false,
         },
       });
 
@@ -198,13 +218,19 @@ if (!user) {
 exports.GetPatientDetails = async (req, res, next) => {
   try {
     const { patientId } = req.body;
-    
+
     const patient = await Patient.findByPk(patientId, {
+      where: {
+        isDeleted: false,
+      },
       include: [
         {
           model: User,
           as: "user",
           attributes: ["name", "email", "mobile", "image"],
+          where: {
+            isDeleted: false,
+          },
         },
       ],
     });

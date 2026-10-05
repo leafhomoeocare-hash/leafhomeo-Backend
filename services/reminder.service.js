@@ -93,11 +93,21 @@ const sendAppointmentReminders = async () => {
         to: patient.email,
         subject: 'Appointment Reminder - Leaf Homeo',
         html: `
-          <h2>Appointment Reminder</h2>
-          <p>Dear ${patient.name},</p>
-          <p>Your appointment with Dr. ${doctor.name} is scheduled for tomorrow at ${new Date(appointment.appointmentDateTime).toLocaleTimeString()}.</p>
-          <p>Please make sure to complete your payment before the consultation.</p>
-          <p>Thank you,<br>Leaf Homeo Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Leaf Homeo Care</h1>
+            </div>
+            <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+              <h2 style="color: #145656; margin-top: 0;">Appointment Reminder</h2>
+              <p style="color: #374151; line-height: 1.6;">Dear ${patient.name},</p>
+              <p style="color: #374151; line-height: 1.6;">Your appointment with <strong>Dr. ${doctor.name}</strong> is scheduled for tomorrow at <strong>${new Date(appointment.appointmentDateTime).toLocaleTimeString()}</strong>.</p>
+              <p style="color: #374151; line-height: 1.6;">Please make sure to complete your payment before the consultation.</p>
+              <div style="background: #64a281; color: white; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
+                <p style="margin: 0; font-weight: bold;">🌿 Natural Healing, Personalized Care</p>
+              </div>
+              <p style="color: #6b7280; margin-bottom: 0;">Thank you,<br>Leaf Homeo Team</p>
+            </div>
+          </div>
         `
       });
 
@@ -189,11 +199,21 @@ const sendPaymentReminders = async () => {
         to: patient.email,
         subject: 'Payment Reminder - Leaf Homeo',
         html: `
-          <h2>Payment Reminder</h2>
-          <p>Dear ${patient.name},</p>
-          <p>Your appointment with Dr. ${doctor.name} is starting in 1 hour.</p>
-          <p>Please complete your payment before the consultation starts.</p>
-          <p>Thank you,<br>Leaf Homeo Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Leaf Homeo Care</h1>
+            </div>
+            <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+              <h2 style="color: #145656; margin-top: 0;">Payment Reminder</h2>
+              <p style="color: #374151; line-height: 1.6;">Dear ${patient.name},</p>
+              <p style="color: #374151; line-height: 1.6;">Your appointment with <strong>Dr. ${doctor.name}</strong> is starting in 1 hour.</p>
+              <p style="color: #374151; line-height: 1.6;">Please complete your payment before the consultation starts.</p>
+              <div style="background: #145656; color: white; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
+                <p style="margin: 0; font-weight: bold;">⚠️ Payment Required</p>
+              </div>
+              <p style="color: #6b7280; margin-bottom: 0;">Thank you,<br>Leaf Homeo Team</p>
+            </div>
+          </div>
         `
       });
 

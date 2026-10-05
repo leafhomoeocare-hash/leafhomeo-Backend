@@ -29,7 +29,6 @@ var appointmentRouter = require('./routes/appointment');
 var doctorRouter = require('./routes/doctor');
 var paymentRouter = require('./routes/payment');
 var chatRouter = require('./routes/chat');
-var blogRouter = require('./routes/blog');
 var couponRouter = require('./routes/coupon');
 var shippingRouter = require('./routes/shipping');
  const cors = require("cors");
@@ -75,7 +74,6 @@ app.use("/api/v1/appointment", appointmentRouter);
 app.use("/api/v1/doctor", doctorRouter);
 app.use('/api/v1/payment',paymentRouter);
 app.use('/api/v1/chat', chatRouter);
-app.use('/api/v1/blog', blogRouter);
 app.use('/api/v1', couponRouter);
 app.use('/api/v1/shipping', shippingRouter);
 
@@ -106,12 +104,12 @@ sequelize
   .catch((error) => {
     console.error("❌ Database Connection Failed:", error);
   });
-sequelize
-  .sync({ alter: true })
-  .then(() => {
-    console.log("✅ Tables Synced");
-  })
-  .catch(console.error);
+// sequelize
+//   .sync()
+//   .then(() => {
+//     console.log("✅ Tables Synced");
+//   })
+//   .catch(console.error);
 
 // Schedule reminder checks - run every hour using setInterval
 setInterval(async () => {

@@ -10,7 +10,7 @@ const legalController = require("../../controller/admin/legalController");
 const blogController = require("../../controller/admin/blogController");
 const {upload, uploadOptional} = require("../../middleware/multer");
 
-router.post("/add", authmiddleware, rbacMiddleware("admin"), doctorController.AddDoctor);
+router.post("/add", authmiddleware, rbacMiddleware("admin"), upload.single("image"), doctorController.AddDoctor);
 router.post("/getdoctors", authmiddleware, rbacMiddleware("admin"), doctorController.GetDoctors);
 router.post("/delete", authmiddleware, rbacMiddleware("admin"), doctorController.DeleteDoctor);
 router.post("/updatedoctor", authmiddleware, rbacMiddleware("admin"), upload.single("image"), doctorController.UpdateDoctor);
@@ -32,22 +32,13 @@ router.get("/terms-conditions", legalController.GetTermsConditions);
 router.put("/terms-conditions/update", authmiddleware, rbacMiddleware("admin"), legalController.UpdateTermsConditions);
 
 
-// Blog routes - use simple single upload for better compatibility
-router.post("/add-blog", authmiddleware, rbacMiddleware("admin"), (req, res, next) => {
-  console.log('=== BEFORE MULTER ===');
-  console.log('Content-Type:', req.get('Content-Type'));
-  next();
-}, upload.single("Image"), (req, res, next) => {
-  console.log('=== AFTER MULTER ===');
-  console.log('File:', req.file);
-  console.log('Body:', req.body);
-  next();
-}, blogController.CreateBlog);
-
-router.get("/get-blogs", authmiddleware, rbacMiddleware("admin"), blogController.GetBlogs);
-
-router.post("/update-blog", authmiddleware, rbacMiddleware("admin"), upload.single("Image"), blogController.UpdateBlog);
-router.post("/delete-blog", authmiddleware, rbacMiddleware("admin"), blogController.DeleteBlog);    
+// Blog routes
+router.post("/blog/create", authmiddleware, rbacMiddleware("admin"), uploadOptional.single("image"), blogController.CreateBlog);
+router.post("/blog/get-all", authmiddleware, rbacMiddleware("admin"), blogController.GetAllBlogs);
+router.post("/blog/get-by-id", authmiddleware, rbacMiddleware("admin"), blogController.GetBlogById);
+router.post("/blog/update", authmiddleware, rbacMiddleware("admin"), uploadOptional.single("image"), blogController.UpdateBlog);
+router.post("/blog/delete", authmiddleware, rbacMiddleware("admin"), blogController.DeleteBlog);
+router.post("/blog/get-authors", authmiddleware, rbacMiddleware("admin"), blogController.GetAuthors);    
 
 
 

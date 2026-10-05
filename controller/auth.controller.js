@@ -56,6 +56,7 @@ exports.register = async (req, res, next) => {
           { mobile: formattedMobile },
           { mobile: mobile }
         ],
+        isDeleted: false,
       },
     });
 
@@ -136,15 +137,26 @@ exports.login = async (req, res) => {
     }
 
     const user = await User.findOne({
-      where: { email },
+      where: { 
+        email,
+        isDeleted: false,
+      },
       include: [
         {
           model: Patient,
           as: "patientProfile",
+          where: {
+            isDeleted: false,
+          },
+          required: false,
         },
         {
           model: Doctor,
           as: "doctorProfile",
+          where: {
+            isDeleted: false,
+          },
+          required: false,
         },
       ],
     });
@@ -211,6 +223,9 @@ exports.GetUser = async (req, res) => {
     const userId = req.user.id;
 
     const user = await User.findByPk(userId, {
+      where: {
+        isDeleted: false,
+      },
       attributes: {
         exclude: [
           "password",
@@ -222,10 +237,18 @@ exports.GetUser = async (req, res) => {
         {
           model: Patient,
           as: "patientProfile",
+          where: {
+            isDeleted: false,
+          },
+          required: false,
         },
         {
           model: Doctor,
           as: "doctorProfile",
+          where: {
+            isDeleted: false,
+          },
+          required: false,
         },
       ],
     });
@@ -358,9 +381,15 @@ exports.UpdateProfile = async (req, res) => {
       });
     }
 
-    const user = await User.findByPk(userId, { transaction });
+    const user = await User.findByPk(userId, { 
+      where: { isDeleted: false },
+      transaction 
+    });
     const patient = await Patient.findOne({
-      where: { userId },
+      where: { 
+        userId,
+        isDeleted: false,
+      },
       transaction,
     });
 
@@ -472,11 +501,17 @@ const image = req.file ? req.file.path : null;
       country,
     } = req.body;
 
-    const user = await User.findByPk(userId, { transaction });
+    const user = await User.findByPk(userId, { 
+      where: { isDeleted: false },
+      transaction 
+    });
     console.log("User found:", !!user);
 
     let patient = await Patient.findOne({
-      where: { userId },
+      where: { 
+        userId,
+        isDeleted: false,
+      },
       transaction,
     });
     console.log("Patient found:", !!patient);
@@ -548,7 +583,10 @@ exports.ForgetPassword = async (req, res) => {
     const { email } = req.body;
 
     const user = await User.findOne({
-      where: { email }
+      where: { 
+        email,
+        isDeleted: false,
+      }
     });
 
     if (!user) {
@@ -581,8 +619,23 @@ exports.ForgetPassword = async (req, res) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "Password Reset OTP",
-      text: `Your OTP for password reset is: ${otp}. This code is valid for 10 minutes.`
+      subject: "Password Reset OTP - Leaf Homeo",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Leaf Homeo Care</h1>
+          </div>
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <h2 style="color: #145656; margin-top: 0;">Password Reset OTP</h2>
+            <p style="color: #374151; line-height: 1.6;">Your OTP for password reset is:</p>
+            <div style="background: #64a281; color: white; padding: 20px; border-radius: 5px; text-align: center; margin: 20px 0; font-size: 24px; font-weight: bold; letter-spacing: 2px;">
+              ${otp}
+            </div>
+            <p style="color: #374151; line-height: 1.6;">This code is valid for 10 minutes.</p>
+            <p style="color: #6b7280; margin-bottom: 0;">If you didn't request this, please ignore this email.</p>
+          </div>
+        </div>
+      `
     };
 
     await transporter.sendMail(mailOptions);
@@ -608,7 +661,10 @@ exports.VerifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
     const user = await User.findOne({
-      where: { email }
+      where: { 
+        email,
+        isDeleted: false,
+      }
     });
 
     if (!user) {
@@ -665,7 +721,10 @@ exports.ResetPassword = async (req, res) => {
     }
 
     const user = await User.findOne({
-      where: { email },
+      where: { 
+        email,
+        isDeleted: false,
+      },
     });
 
     if (!user) {
@@ -724,7 +783,10 @@ exports.SetupPassword = async (req, res) => {
     }
 
     const user = await User.findOne({
-      where: { email },
+      where: { 
+        email,
+        isDeleted: false,
+      },
     });
 
     if (!user) {
@@ -776,7 +838,14 @@ exports.NotificationList = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Get all notifications
+    console.log("🔔 Fetching notifications for user:", userId);
+
+    // Disable caching
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    // Get all notifications (don't mark as read automatically)
     const notifications = await Notification.findAll({
       where: {
         userId,
@@ -784,13 +853,16 @@ exports.NotificationList = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
+    console.log("📬 Total notifications:", notifications.length);
+    console.log("📊 Unread notifications:", notifications.filter(n => !n.isRead).length);
+
     return res.status(200).json({
       status: 1,
       message: "Notifications retrieved successfully",
       data: notifications,
     });
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error in NotificationList:", error);
 
     return res.status(500).json({
       status: 0,
@@ -833,6 +905,75 @@ exports.DeleteNotification = async (req, res) => {
   }
 };
 
+exports.MarkNotificationAsRead = async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+    const userId = req.user.id;
+
+    // Mark notification as read if it belongs to the user
+    const updated = await Notification.update(
+      { isRead: true },
+      {
+        where: {
+          id: notificationId,
+          userId,
+        },
+      }
+    );
+
+    if (updated[0] === 0) {
+      return res.status(404).json({
+        status: 0,
+        message: "Notification not found or doesn't belong to user",
+      });
+    }
+
+    return res.status(200).json({
+      status: 1,
+      message: "Notification marked as read successfully",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong",
+    });
+  }
+};
+
+exports.MarkAllNotificationsAsRead = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Mark all notifications as read for the user
+    const updated = await Notification.update(
+      { isRead: true },
+      {
+        where: {
+          userId,
+          isRead: false,
+        },
+      }
+    );
+
+    return res.status(200).json({
+      status: 1,
+      message: "All notifications marked as read successfully",
+      data: {
+        updatedCount: updated[0],
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong",
+    });
+  }
+};
+
     exports.TruncateNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -863,7 +1004,11 @@ exports.DeleteUser = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(userId, {
+      where: {
+        isDeleted: false,
+      },
+    });
 
     if (!user) {
       return res.status(404).json({
@@ -875,72 +1020,44 @@ exports.DeleteUser = async (req, res) => {
     // Doctor
     if (user.role === "doctor") {
       const doctor = await Doctor.findOne({
-        where: { userId },
+        where: { 
+          userId,
+          isDeleted: false,
+        },
       });
 
       if (doctor) {
-        const appointments = await Appointment.findAll({
-          where: { doctorId: doctor.id },
-          attributes: ["id"],
+        // Soft delete doctor
+        await doctor.update({
+          isDeleted: true,
+          deletedAt: new Date(),
         });
-
-        const appointmentIds = appointments.map(
-          (appointment) => appointment.id
-        );
-
-        if (appointmentIds.length > 0) {
-          await Payment.destroy({
-            where: {
-              appointmentId: appointmentIds,
-            },
-          });
-
-          await Appointment.destroy({
-            where: {
-              id: appointmentIds,
-            },
-          });
-        }
-
-        await doctor.destroy();
       }
     }
 
     // Patient
     if (user.role === "patient") {
       const patient = await Patient.findOne({
-        where: { userId },
+        where: { 
+          userId,
+          isDeleted: false,
+        },
       });
 
       if (patient) {
-        const appointments = await Appointment.findAll({
-          where: { patientId: patient.id },
-          attributes: ["id"],
+        // Soft delete patient
+        await patient.update({
+          isDeleted: true,
+          deletedAt: new Date(),
         });
-
-        const appointmentIds = appointments.map(
-          (appointment) => appointment.id
-        );
-
-        if (appointmentIds.length > 0) {
-          await Payment.destroy({
-            where: {
-              appointmentId: appointmentIds,
-            },
-          });
-
-          await Appointment.destroy({
-            where: {
-              id: appointmentIds,
-            },
-          });
-        }
-
-        await patient.destroy();
       }
     }
 
-    await user.destroy();
+    // Soft delete user
+    await user.update({
+      isDeleted: true,
+      deletedAt: new Date(),
+    });
 
     return res.status(200).json({
       status: 1,

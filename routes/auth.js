@@ -16,6 +16,8 @@ router.post('/setup-password', authController.SetupPassword);
 router.get('/delete-user', authmiddleware, authController.DeleteUser);
 router.get('/get-notifications', authmiddleware, authController.NotificationList);
 router.delete('/notification/:notificationId', authmiddleware, authController.DeleteNotification);
+router.put('/notification/:notificationId/mark-read', authmiddleware, authController.MarkNotificationAsRead);
+router.put('/notifications/mark-all-read', authmiddleware, authController.MarkAllNotificationsAsRead);
 router.delete('/truncate-notifications', authmiddleware, authController.TruncateNotifications);
 router.post('/add-token',authmiddleware,authController.UpdateFcmToken)
 // Phone verification routes

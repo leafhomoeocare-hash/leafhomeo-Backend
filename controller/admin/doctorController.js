@@ -10,6 +10,7 @@ const nodemailer = require("nodemailer");
 const JWT_SECRET = process.env.JWT_SECRET;
 exports.AddDoctor = async (req, res, next) => {
     try {
+    const image = req.file ? req.file.path : null;
     const {
       name,
       email,
@@ -22,6 +23,7 @@ exports.AddDoctor = async (req, res, next) => {
       IsExpert,
     } = req.body;
     console.log(req.body,"BODY");
+    console.log("Image file:", req.file);
     
     if (!Array.isArray(specialization) || specialization.length === 0) {
   return res.status(400).json({
@@ -33,6 +35,7 @@ exports.AddDoctor = async (req, res, next) => {
     const existingUser = await User.findOne({
       where: {
         [Op.or]: [{ email }, { mobile }],
+        isDeleted: false,
       },
     });
 
@@ -55,6 +58,7 @@ exports.AddDoctor = async (req, res, next) => {
       password: hashedPassword,
       role: "doctor",
       isPasswordSet: false,
+      image: image,
     });
 
     // Generate reset token for password setup
@@ -113,7 +117,7 @@ exports.AddDoctor = async (req, res, next) => {
               box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             }
             .header {
-              background: linear-gradient(135deg, #00B100 0%, #008800 100%);
+              background: linear-gradient(135deg, #64a281 0%, #145656 100%);
               color: white;
               padding: 30px;
               text-align: center;
@@ -138,7 +142,7 @@ exports.AddDoctor = async (req, res, next) => {
             }
             .info-box {
               background: #f8f9fa;
-              border-left: 4px solid #00B100;
+              border-left: 4px solid #64a281;
               padding: 15px;
               margin: 20px 0;
               border-radius: 4px;
@@ -148,7 +152,7 @@ exports.AddDoctor = async (req, res, next) => {
               font-size: 14px;
             }
             .info-box strong {
-              color: #00B100;
+              color: #64a281;
             }
             .button-container {
               text-align: center;
@@ -156,19 +160,19 @@ exports.AddDoctor = async (req, res, next) => {
             }
             .button {
               display: inline-block;
-              background: linear-gradient(135deg, #00B100 0%, #008800 100%);
+              background: linear-gradient(135deg, #64a281 0%, #145656 100%);
               color: white;
               padding: 15px 40px;
               text-decoration: none;
               border-radius: 50px;
               font-weight: 600;
               font-size: 16px;
-              box-shadow: 0 4px 15px rgba(0, 177, 0, 0.3);
+              box-shadow: 0 4px 15px rgba(100, 162, 129, 0.3);
               transition: all 0.3s ease;
             }
             .button:hover {
               transform: translateY(-2px);
-              box-shadow: 0 6px 20px rgba(0, 177, 0, 0.4);
+              box-shadow: 0 6px 20px rgba(100, 162, 129, 0.4);
             }
             .security-note {
               background: #fff3cd;
@@ -188,7 +192,7 @@ exports.AddDoctor = async (req, res, next) => {
               border-top: 1px solid #e9ecef;
             }
             .footer a {
-              color: #00B100;
+              color: #64a281;
               text-decoration: none;
             }
             .emoji {
@@ -212,10 +216,10 @@ exports.AddDoctor = async (req, res, next) => {
                 <p><strong>🩺 Role:</strong> Doctor</p>
               </div>
 
-              <p class="welcome-text">To get started, please set up your password by clicking the button below:</p>
+              <p class="welcome-text">To get started, please set up your password by clicking the link below:</p>
 
               <div class="button-container">
-                <a href="${resetLink}" class="button">Set Your Password</a>
+                <a href="${resetLink}" style="color: #64a281; text-decoration: underline; font-weight: 600;">Click here to set your password</a>
               </div>
 
               <div class="security-note">
@@ -263,30 +267,38 @@ exports.AddDoctor = async (req, res, next) => {
 exports.GetDoctors = async (req, res, next) => {
   try {
     const { page = 1, limit = 10, search = "" } = req.body;
+    console.log("GetDoctors called with:", { page, limit, search });
 
     const offset = (page - 1) * Number(limit);
 
-    const where = {};
+    const where = {
+      isDeleted: false,
+    };
 
     if (search) {
-      where[Op.or] = [
-        { specialization: { [Op.iLike]: `%${search}%` } },
+      const searchConditions = [
         { qualification: { [Op.iLike]: `%${search}%` } },
         { bio: { [Op.iLike]: `%${search}%` } },
-     
-      
-
         { "$user.name$": { [Op.iLike]: `%${search}%` } },
         { "$user.email$": { [Op.iLike]: `%${search}%` } },
         { "$user.mobile$": { [Op.iLike]: `%${search}%` } },
-          ...( !isNaN(search)
-      ? [
+      ];
+
+      // For array field specialization, use contains operator
+      searchConditions.push({
+        specialization: {
+          [Op.contains]: [search]
+        }
+      });
+
+      if (!isNaN(search)) {
+        searchConditions.push(
           { consultationFee: Number(search) },
           { experience: Number(search) }
-        ]
-      : []
-  )
-      ];
+        );
+      }
+
+      where[Op.or] = searchConditions;
     }
 
     const { count, rows } = await Doctor.findAndCountAll({
@@ -298,6 +310,9 @@ exports.GetDoctors = async (req, res, next) => {
           as: "user",
           attributes: ["name", "email", "mobile", "image", "isPasswordSet"],
           required: false,
+          where: {
+            isDeleted: false,
+          },
         },
       ],
 
@@ -307,6 +322,9 @@ exports.GetDoctors = async (req, res, next) => {
       offset,
 
       order: [["id", "DESC"]],
+    }).catch(err => {
+      console.error("Doctor query error:", err);
+      throw err;
     });
 
     return res.status(200).json({
@@ -338,13 +356,23 @@ exports.DeleteDoctor = async (req, res, next) => {
 
     const userId = doctor.userId;
 
-    await doctor.destroy();
-
-    await User.destroy({
-      where: {
-        id: userId,
-      },
+    // Soft delete - mark as deleted instead of destroying
+    await doctor.update({
+      isDeleted: true,
+      deletedAt: new Date(),
     });
+
+    await User.update(
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+      {
+        where: {
+          id: userId,
+        },
+      }
+    );
 
     return res.status(200).json({
       status: 1,
@@ -356,7 +384,7 @@ exports.DeleteDoctor = async (req, res, next) => {
 };
 exports.UpdateDoctor = async (req, res, next) => {
   try {
-    const image = req.file ? req.file.path : null;
+    const image = req.file ? req.file.filename : null;
     const {
       doctorId,
       name,
@@ -375,7 +403,11 @@ if (!Array.isArray(specialization) || specialization.length === 0) {
     message: "At least one specialization is required",
   });
 }
-    const doctor = await Doctor.findByPk(doctorId);
+    const doctor = await Doctor.findByPk(doctorId, {
+      where: {
+        isDeleted: false,
+      },
+    });
     if (!doctor) {
       return res.status(404).json({
         status: 0,
@@ -383,7 +415,11 @@ if (!Array.isArray(specialization) || specialization.length === 0) {
       });
     }
 
-    const user = await User.findByPk(doctor.userId);
+    const user = await User.findByPk(doctor.userId, {
+      where: {
+        isDeleted: false,
+      },
+    });
     if (!user) {
       return res.status(404).json({
         status: 0,

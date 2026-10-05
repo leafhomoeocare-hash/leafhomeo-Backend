@@ -75,9 +75,9 @@ exports.createOrder = async (req, res) => {
 
         if (new Date() <= expireDate) {
           if (coupon.discountType === "fixed") {
-            discountAmount = coupon.discountValue;
+            discountAmount = Number(coupon.discountValue);
           } else if (coupon.discountType === "percentage") {
-            discountAmount = (amount * coupon.discountValue) / 100;
+            discountAmount = (amount * Number(coupon.discountValue)) / 100;
           }
 
           // Ensure discount doesn't exceed amount
@@ -111,6 +111,7 @@ exports.createOrder = async (req, res) => {
       status: "pending",
     });
 
+    
     return res.status(200).json({
       status: 1,
       message: "Order created successfully",
@@ -129,6 +130,7 @@ exports.createOrder = async (req, res) => {
         } : null,
       },
     });
+
 
   } catch (error) {
     console.error(error);

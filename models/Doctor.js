@@ -42,7 +42,15 @@ const Doctor = sequelize.define(
     IsExpert:{
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-    }
+    },
+    isDeleted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     tableName: "doctors",

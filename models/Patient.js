@@ -67,6 +67,14 @@ const Patient = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    isDeleted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
 
 

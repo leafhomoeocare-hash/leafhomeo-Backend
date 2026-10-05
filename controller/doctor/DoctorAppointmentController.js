@@ -357,30 +357,55 @@ exports.RejectAppointment = async (req, res) => {
       });
     }
 
-    appointment.status = "rejected";
-    await appointment.save();
+    // For any_doctor requests, don't change status - just record rejection
+    // For specific_doctor, change status to rejected
+    if (appointment.requestType === "specific_doctor") {
+      appointment.status = "rejected";
+      await appointment.save();
 
-    // Send notification to patient
-    const patient = await Patient.findByPk(appointment.patientId);
-    const doctorUser = await User.findByPk(doctor.userId);
-    
-    if (patient) {
-      await Notification.create({
-        userId: patient.userId,
-        senderId: doctor.userId,
-        title: "Appointment Rejected",
-        message: "Your appointment has been rejected.",
-        type: "appointment",
-        referenceId: appointment.id
+      // Send notification to patient
+      const patient = await Patient.findByPk(appointment.patientId);
+      const doctorUser = await User.findByPk(doctor.userId);
+
+      if (patient) {
+        await Notification.create({
+          userId: patient.userId,
+          senderId: doctor.userId,
+          title: "Appointment Rejected",
+          message: "Your appointment has been rejected.",
+          type: "appointment",
+          referenceId: appointment.id
+        });
+      }
+
+      return res.status(200).json({
+        status: 1,
+        message: "Appointment rejected successfully",
+        data: appointment
       });
+    } else {
+      // For any_doctor, just send notification to patient that this doctor declined
+      // Appointment remains pending for other doctors
+      const patient = await Patient.findByPk(appointment.patientId);
+      const doctorUser = await User.findByPk(doctor.userId);
 
+      if (patient) {
+        await Notification.create({
+          userId: patient.userId,
+          senderId: doctor.userId,
+          title: "Doctor Declined",
+          message: `Dr. ${doctorUser.name} is not available for this appointment. Other doctors may accept it.`,
+          type: "appointment",
+          referenceId: appointment.id
+        });
+      }
+
+      return res.status(200).json({
+        status: 1,
+        message: "Appointment declined",
+        data: appointment
+      });
     }
-
-    return res.status(200).json({
-      status: 1,
-      message: "Appointment rejected successfully",
-      data: appointment
-    });
 
   } catch (error) {
     console.log(error);
@@ -534,6 +559,9 @@ exports.GetDoctorAppointments = async (req, res) => {
   try {
     const userId = req.user.id;
     const { status } = req.body;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
     const doctor = await Doctor.findOne({
       where: { userId }
@@ -561,7 +589,7 @@ exports.GetDoctorAppointments = async (req, res) => {
       whereClause.status = status;
     }
 
-    const appointments = await Appointment.findAll({
+    const { count, rows: appointments } = await Appointment.findAndCountAll({
       where: whereClause,
       include: [
         {
@@ -582,7 +610,9 @@ exports.GetDoctorAppointments = async (req, res) => {
           attributes: ["id"]
         }
       ],
-      order: [["appointmentDateTime", "DESC"]]
+      order: [["appointmentDateTime", "DESC"]],
+      limit,
+      offset
     });
 
     const data = appointments.map(apt => ({
@@ -604,7 +634,13 @@ exports.GetDoctorAppointments = async (req, res) => {
     return res.status(200).json({
       status: 1,
       message: "Appointments fetched successfully",
-      data
+      data,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(count / limit),
+        totalItems: count,
+        itemsPerPage: limit
+      }
     });
 
   } catch (error) {

@@ -10,39 +10,51 @@ const Blog = sequelize.define(
       primaryKey: true,
     },
 
-    Image: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-
     title: {
       type: DataTypes.STRING,
       allowNull: false,
-      validate: {
-        notEmpty: {
-          msg: "Title cannot be empty"
-        }
-      }
     },
 
     description: {
       type: DataTypes.TEXT,
+      allowNull: false,
+    },
+
+    authorType: {
+      type: DataTypes.ENUM("admin", "doctor"),
+      allowNull: false,
+    },
+
+    authorId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      comment: "User ID of the author (admin or doctor)",
+    },
+
+    blogType: {
+      type: DataTypes.ENUM("patient", "doctor", "all"),
+      allowNull: false,
+      defaultValue: "all",
+      comment: "Who can view this blog: patient, doctor, or all",
+    },
+
+    image: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
 
-    type: {
-      type: DataTypes.ENUM("Patient", "Doctor"),
-      allowNull: false,
-      defaultValue: "Patient",
-      validate: {
-        isIn: {
-          args: [["Patient", "Doctor"]],
-          msg: "Type must be either Patient or Doctor"
-        }
-      }
+    isDeleted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   },
   {
+    tableName: "blogs",
     timestamps: true,
   }
 );

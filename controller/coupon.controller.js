@@ -266,9 +266,9 @@ exports.validateCoupon = async (req, res) => {
     let discountAmount = 0;
 
     if (coupon.discountType === "fixed") {
-      discountAmount = coupon.discountValue;
+      discountAmount = Number(coupon.discountValue);
     } else if (coupon.discountType === "percentage") {
-      discountAmount = (amount * coupon.discountValue) / 100;
+      discountAmount = (amount * Number(coupon.discountValue)) / 100;
     }
 
     if (discountAmount > amount) {

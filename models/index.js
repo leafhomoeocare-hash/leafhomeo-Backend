@@ -11,6 +11,7 @@ const PrivacyPolicy = require('./privacypolicy');
 const TermsConditions = require('./termsconditions');
 const Consultation = require('./Consultation');
 const Coupon = require('./Coupon');
+const Blog = require('./Blog');
 /*
 
  User Relations with Doctor 
@@ -197,6 +198,29 @@ Coupon.hasMany(Payment, {
   as: "payments",
 });
 
+// Blog relations
+Blog.belongsTo(User, {
+  foreignKey: "authorId",
+  as: "author",
+});
+
+User.hasMany(Blog, {
+  foreignKey: "authorId",
+  as: "blogs",
+});
+
+// Blog relation with Doctor (if author is a doctor)
+Blog.belongsTo(Doctor, {
+  foreignKey: "authorId",
+  as: "doctorAuthor",
+  constraints: false,
+});
+
+Doctor.hasMany(Blog, {
+  foreignKey: "authorId",
+  as: "blogs",
+});
+
 console.log("✅ Model Relations Loaded");
 
 module.exports = {
@@ -212,5 +236,6 @@ module.exports = {
   PrivacyPolicy,
   TermsConditions,
   Consultation,
-  Coupon
+  Coupon,
+  Blog
 };

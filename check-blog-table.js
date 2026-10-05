@@ -9,19 +9,21 @@ async function checkBlogTable() {
     console.log('✅ Database connected');
 
     console.log('\nSyncing Blog model...');
-    await Blog.sync({ alter: true });
+    await Blog.sync();
     console.log('✅ Blog table synced');
 
     console.log('\nChecking table structure...');
-    const tableInfo = await sequelize.getQueryInterface().describeTable('Blogs');
+    const tableInfo = await sequelize.getQueryInterface().describeTable('blogs');
     console.log('Table structure:', JSON.stringify(tableInfo, null, 2));
 
     console.log('\nTesting blog creation...');
     const testBlog = await Blog.create({
       title: 'Test Blog',
       description: '<p>Test description</p>',
-      type: 'Patient',
-      Image: null
+      authorType: 'admin',
+      authorId: 1,
+      blogType: 'all',
+      image: null
     });
     console.log('✅ Test blog created:', testBlog.toJSON());
 

@@ -117,7 +117,10 @@ exports.AppointmentBooking = async (req, res, next) => {
     console.log("Patient User ID from token:", userId);
 
     const patient = await Patient.findOne({
-      where: { userId },
+      where: { 
+        userId,
+        isDeleted: false,
+      },
       transaction,
     });
 
@@ -153,7 +156,10 @@ exports.AppointmentBooking = async (req, res, next) => {
     }
 
     if (requestType === "specific_doctor") {
-      const doctor = await Doctor.findByPk(doctorId, { transaction });
+      const doctor = await Doctor.findByPk(doctorId, { 
+        where: { isDeleted: false },
+        transaction 
+      });
       if (!doctor) {
         console.log("❌ ERROR: Doctor not found with ID:", doctorId);
         await transaction.rollback();
@@ -262,6 +268,9 @@ exports.AppointmentBooking = async (req, res, next) => {
     } else if (requestType === "any_doctor") {
       const doctors = await Doctor.findAll({
         attributes: ["userId"],
+        where: {
+          isDeleted: false,
+        },
         transaction,
       });
 
@@ -303,7 +312,10 @@ exports.UpcomingAppointments = async (req, res) => {
     const userId = req.user.id;
 
     const patient = await Patient.findOne({
-      where: { userId }
+      where: { 
+        userId,
+        isDeleted: false,
+      }
     });
 
     if (!patient) {
@@ -459,9 +471,15 @@ exports.UpcomingAppointments = async (req, res) => {
 exports.myAppointments = async (req, res) => {
   try {
     const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
     const patient = await Patient.findOne({
-      where: { userId }
+      where: { 
+        userId,
+        isDeleted: false,
+      }
     });
 
     if (!patient) {
@@ -471,7 +489,7 @@ exports.myAppointments = async (req, res) => {
       });
     }
 
-    const appointments = await Appointment.findAll({
+    const { count, rows: appointments } = await Appointment.findAndCountAll({
       where: {
         patientId: patient.id
       },
@@ -481,14 +499,16 @@ exports.myAppointments = async (req, res) => {
         "status",
         "appointmentDateTime",
         "reason",
-        "appointmentId"
+        "appointmentId",
+        "requestType"
       ],
 
       include: [
         {
           model: Doctor,
           as: "doctor",
-          attributes: ["id", "userId", "consultationFee"],
+          attributes: ["id", "userId", "consultationFee", "specialization", "experience", "qualification"],
+          required: false,
 
           include: [
             {
@@ -505,25 +525,37 @@ exports.myAppointments = async (req, res) => {
 
       order: [
         ["appointmentDateTime", "DESC"]
-      ]
+      ],
+      limit,
+      offset
     });
 
     const result = appointments.map(item => ({
       id: item.id,
-      doctorUserId: item.doctor?.userId,
-      doctorName: item.doctor?.user?.name,
+      doctorUserId: item.doctor?.userId || null,
+      doctorName: item.doctor?.user?.name || null,
       doctorImage: item.doctor?.user?.image ? `http://localhost:5000/${item.doctor?.user?.image}` : null,
       status: item.status,
       appointmentDateTime: item.appointmentDateTime,
       appointmentId: item.appointmentId,
       reason: item.reason,
-      consultationFee: item.doctor?.consultationFee
+      consultationFee: item.doctor?.consultationFee || null,
+      requestType: item.requestType,
+      specialization: item.doctor?.specialization || null,
+      experience: item.doctor?.experience || null,
+      qualification: item.doctor?.qualification || null
     }));
 
     return res.status(200).json({
       status: 1,
       message: "Appointments fetched successfully",
-      data: result
+      data: result,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(count / limit),
+        totalItems: count,
+        itemsPerPage: limit
+      }
     });
 
   } catch (error) {
@@ -544,7 +576,10 @@ exports.CancelAppointment = async (req, res) => {
     const { appointmentId } = req.body;
 
     const patient = await Patient.findOne({
-      where: { userId },
+      where: { 
+        userId,
+        isDeleted: false,
+      },
     });
 
     if (!patient) {
@@ -903,7 +938,10 @@ exports.Review = async (req, res) => {
     }
 
     const patient = await Patient.findOne({
-      where: { userId },
+      where: { 
+        userId,
+        isDeleted: false,
+      },
     });
 
     if (!patient) {
@@ -1015,7 +1053,10 @@ exports.SubmitConsultation = async (req, res) => {
     }
 
     const doctor = await Doctor.findOne({
-      where: { userId },
+      where: { 
+        userId,
+        isDeleted: false,
+      },
     });
 
     if (!doctor) {

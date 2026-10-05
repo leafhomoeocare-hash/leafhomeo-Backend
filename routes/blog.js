@@ -3,7 +3,12 @@ const router = express.Router();
 const authmiddleware = require("../middleware/auth");
 const blogController = require("../controller/admin/blogController");
 
-// Public blog routes for authenticated users (patients and doctors)
-router.get("/get-blogs", authmiddleware, blogController.GetBlogs);
+// Admin blog routes
+router.post("/create", authmiddleware, blogController.CreateBlog);
+router.post("/get-all", authmiddleware, blogController.GetAllBlogs);
+router.post("/get-by-id", authmiddleware, blogController.GetBlogById);
+router.post("/update", authmiddleware, blogController.UpdateBlog);
+router.post("/delete", authmiddleware, blogController.DeleteBlog);
+router.post("/get-authors", authmiddleware, blogController.GetAuthors);
 
 module.exports = router;
