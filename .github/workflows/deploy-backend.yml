@@ -16,10 +16,13 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
-            export PATH=/root/.nvm/versions/node/v24.21.0/bin:$PATH
-            cd /root/Leaf-Homeo-Care
-            git fetch origin
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+            cd /root/leafhomeo-Backend
+            git fetch origin main
             git reset --hard origin/main
-            npm install
-            pm2 restart leaf-backend --update-env || pm2 start npm --name leaf-backend -- start
+            npm ci --omit=dev
+
+            pm2 restart leafhomeo-api --update-env || pm2 start npm --name leafhomeo-api -- start
             pm2 save
