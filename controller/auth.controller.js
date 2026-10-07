@@ -136,6 +136,19 @@ exports.login = async (req, res) => {
       });
     }
 
+    // First check if user exists (including deleted ones)
+    const userWithDeleted = await User.findOne({
+      where: { email },
+    });
+
+    // If user exists but is deleted, show banned message
+    if (userWithDeleted && userWithDeleted.isDeleted) {
+      return res.status(403).json({
+        status: 0,
+        message: "Your account has been banned by admin",
+      });
+    }
+
     const user = await User.findOne({
       where: { 
         email,
