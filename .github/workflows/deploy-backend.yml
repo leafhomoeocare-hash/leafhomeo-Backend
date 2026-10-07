@@ -1,18 +1,19 @@
-name: Deploy Frontend
+name: Deploy Backend
 
 on:
   push:
-    branches: [ main ]
-
-concurrency:
-  group: deploy-frontend
-  cancel-in-progress: false
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Deploy via SSH
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -20,19 +21,22 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
-            set -e
-            export PATH=/root/.nvm/versions/node/v24.21.0/bin:$PATH
-            cd /root/leafhomeo-frontend
+            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -n 1)/bin
+            
+            # Navigate to project folder (creates directory if it doesn't exist)
+            TARGET_DIR=$(eval echo ~$USER)/leafhomeo-Backend
+            if [ ! -d "$TARGET_DIR" ]; then
+              TARGET_DIR="/root/leafhomeo-Backend"
+            fi
+            cd "$TARGET_DIR"
 
-            git fetch origin
+            # Pull latest changes
+            git fetch origin main
             git reset --hard origin/main
 
-            # server wali sahi .env wapas lagao
-            cp /root/leafhomeo-frontend.env .env
+            # Install dependencies using node path directly
+            npm ci --omit=dev
 
-            npm ci
-            npm run build
-
-            # build successful hone ke baad hi purani files hatao
-            rm -rf /var/www/leafhomoeocare-frontend/*
-            cp -r dist/* /var/www/leafhomoeocare-frontend/
+            # Reload PM2 application
+            pm2 restart leafhomeo-api --update-env || pm2 start npm --name "leafhomeo-api" -- start
+            pm2 save
