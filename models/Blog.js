@@ -35,7 +35,6 @@ const Blog = sequelize.define(
       type: DataTypes.ENUM("patient", "doctor", "all"),
       allowNull: false,
       defaultValue: "all",
-      comment: "Who can view this blog: patient, doctor, or all",
     },
 
     image: {

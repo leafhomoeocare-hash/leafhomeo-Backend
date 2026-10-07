@@ -1,3 +1,6 @@
+// Load environment variables
+require('dotenv').config();
+
 var createError = require('http-errors');
 var express = require('express');
 console.log(express);
