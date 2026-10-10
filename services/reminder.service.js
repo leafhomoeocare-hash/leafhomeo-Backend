@@ -94,18 +94,20 @@ const sendAppointmentReminders = async () => {
         subject: 'Appointment Reminder - Leaf Homeo',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Leaf Homeo Care</h1>
+            <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+              <div style="font-size: 32px; margin-bottom: 10px;">🌿</div>
+              <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Leaf Homeo Care</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Natural Healing, Personalized Care</p>
             </div>
-            <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
-              <h2 style="color: #145656; margin-top: 0;">Appointment Reminder</h2>
-              <p style="color: #374151; line-height: 1.6;">Dear ${patient.name},</p>
-              <p style="color: #374151; line-height: 1.6;">Your appointment with <strong>Dr. ${doctor.name}</strong> is scheduled for tomorrow at <strong>${new Date(appointment.appointmentDateTime).toLocaleTimeString()}</strong>.</p>
-              <p style="color: #374151; line-height: 1.6;">Please make sure to complete your payment before the consultation.</p>
-              <div style="background: #64a281; color: white; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
-                <p style="margin: 0; font-weight: bold;">🌿 Natural Healing, Personalized Care</p>
+            <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
+              <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Reminder</h2>
+              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patient.name},</p>
+              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment with <strong style="color: #64a281;">Dr. ${doctor.name}</strong> is scheduled for tomorrow at <strong>${new Date(appointment.appointmentDateTime).toLocaleTimeString()}</strong>.</p>
+              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Please make sure to complete your payment before the consultation.</p>
+              <div style="background: linear-gradient(135deg, #64a281 0%, #528f6e 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
+                <p style="margin: 0; font-weight: bold; font-size: 16px;">🌿 Natural Healing, Personalized Care</p>
               </div>
-              <p style="color: #6b7280; margin-bottom: 0;">Thank you,<br>Leaf Homeo Team</p>
+              <p style="color: #6b7280; margin-bottom: 0; font-size: 14px;">Thank you,<br><strong style="color: #145656;">Leaf Homeo Team</strong></p>
             </div>
           </div>
         `
@@ -200,18 +202,20 @@ const sendPaymentReminders = async () => {
         subject: 'Payment Reminder - Leaf Homeo',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Leaf Homeo Care</h1>
+            <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+              <div style="font-size: 32px; margin-bottom: 10px;">🌿</div>
+              <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Leaf Homeo Care</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Natural Healing, Personalized Care</p>
             </div>
-            <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
-              <h2 style="color: #145656; margin-top: 0;">Payment Reminder</h2>
-              <p style="color: #374151; line-height: 1.6;">Dear ${patient.name},</p>
-              <p style="color: #374151; line-height: 1.6;">Your appointment with <strong>Dr. ${doctor.name}</strong> is starting in 1 hour.</p>
-              <p style="color: #374151; line-height: 1.6;">Please complete your payment before the consultation starts.</p>
-              <div style="background: #145656; color: white; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
-                <p style="margin: 0; font-weight: bold;">⚠️ Payment Required</p>
+            <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
+              <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Payment Reminder</h2>
+              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patient.name},</p>
+              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment with <strong style="color: #64a281;">Dr. ${doctor.name}</strong> is starting in 1 hour.</p>
+              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Please complete your payment before the consultation starts.</p>
+              <div style="background: linear-gradient(135deg, #145656 0%, #0f4444 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
+                <p style="margin: 0; font-weight: bold; font-size: 16px;">⚠️ Payment Required</p>
               </div>
-              <p style="color: #6b7280; margin-bottom: 0;">Thank you,<br>Leaf Homeo Team</p>
+              <p style="color: #6b7280; margin-bottom: 0; font-size: 14px;">Thank you,<br><strong style="color: #145656;">Leaf Homeo Team</strong></p>
             </div>
           </div>
         `

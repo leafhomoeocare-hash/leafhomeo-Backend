@@ -113,8 +113,6 @@ exports.AppointmentBooking = async (req, res, next) => {
 
   try {
     const userId = req.user.id;
-    console.log("--- START APPOINTMENT BOOKING ---");
-    console.log("Patient User ID from token:", userId);
 
     const patient = await Patient.findOne({
       where: { 
@@ -125,7 +123,6 @@ exports.AppointmentBooking = async (req, res, next) => {
     });
 
     if (!patient) {
-      console.log("❌ ERROR: Patient profile not found for userId:", userId);
       await transaction.rollback();
       return res.status(404).json({
         status: 0,
@@ -135,10 +132,8 @@ exports.AppointmentBooking = async (req, res, next) => {
 
     const patientId = patient.id;
     const { doctorId, requestType, appointmentDateTime, reason } = req.body;
-    console.log("Request Body Received:", JSON.stringify(req.body, null, 2));
 
     if (!requestType || !appointmentDateTime) {
-      console.log("❌ ERROR: Required fields missing");
       await transaction.rollback();
       return res.status(400).json({
         status: 0,
@@ -147,7 +142,6 @@ exports.AppointmentBooking = async (req, res, next) => {
     }
 
     if (requestType === "specific_doctor" && !doctorId) {
-      console.log("❌ ERROR: Doctor ID missing");
       await transaction.rollback();
       return res.status(400).json({
         status: 0,
@@ -161,7 +155,6 @@ exports.AppointmentBooking = async (req, res, next) => {
         transaction 
       });
       if (!doctor) {
-        console.log("❌ ERROR: Doctor not found with ID:", doctorId);
         await transaction.rollback();
         return res.status(404).json({
           status: 0,
@@ -170,24 +163,16 @@ exports.AppointmentBooking = async (req, res, next) => {
       }
 
       const appointmentDate = new Date(appointmentDateTime);
+      const timePart = appointmentDateTime.split("T")[1] || "00:00:00";
+      const slotTime = timePart.substring(0, 5);
 
-      // FORCE TIMEZONE TO INDIAN STANDARD TIME (IST)
-      const dayOfWeek = appointmentDate.toLocaleDateString("en-US", {
-        weekday: "long",
-        timeZone: "Asia/Kolkata"
-      }).toLowerCase();
-
-      const slotTime = appointmentDate.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Asia/Kolkata"
-      });
+      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const dayOfWeek = days[appointmentDate.getUTCDay()];
 
       console.log("--- PARSED DATE & TIME (IST) ---");
       console.log("Calculated Day Of Week:", dayOfWeek);
       console.log("Calculated Slot Time (HH:mm):", slotTime);
 
-      // Check slot availability in doctor's table
       const availabilitySlot = await Availability.findOne({
         where: {
           doctorId,
@@ -198,16 +183,9 @@ exports.AppointmentBooking = async (req, res, next) => {
         transaction,
       });
 
-      console.log("Database Search Criteria:", {
-        doctorId,
-        dayOfWeek,
-        startTime: slotTime,
-        isAvailable: true,
-      });
       console.log("Availability Record Found in DB:", availabilitySlot ? "YES" : "NO");
 
       if (!availabilitySlot) {
-        console.log("❌ ERROR 400: Time slot not found in DB!");
         await transaction.rollback();
         return res.status(400).json({
           status: 0,
@@ -215,7 +193,6 @@ exports.AppointmentBooking = async (req, res, next) => {
         });
       }
 
-      // Check if already booked
       const existingAppointment = await Appointment.findOne({
         where: {
           doctorId,
@@ -226,7 +203,6 @@ exports.AppointmentBooking = async (req, res, next) => {
       });
 
       if (existingAppointment) {
-        console.log("❌ ERROR 400: Slot already booked!");
         await transaction.rollback();
         return res.status(400).json({
           status: 0,
@@ -235,7 +211,6 @@ exports.AppointmentBooking = async (req, res, next) => {
       }
     }
 
-    // Create Appointment
     const appointment = await Appointment.create(
       {
         patientId,
@@ -250,7 +225,6 @@ exports.AppointmentBooking = async (req, res, next) => {
     appointment.appointmentId = `APT-${String(appointment.id).padStart(5, "0")}`;
     await appointment.save({ transaction });
 
-    // Notifications
     if (requestType === "specific_doctor") {
       const doctor = await Doctor.findByPk(doctorId, { transaction });
 
@@ -306,6 +280,7 @@ exports.AppointmentBooking = async (req, res, next) => {
     });
   }
 };
+
 exports.UpcomingAppointments = async (req, res) => {
   try {
 
