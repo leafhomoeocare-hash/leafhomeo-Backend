@@ -174,14 +174,17 @@ exports.AppointmentBooking = async (req, res, next) => {
       }
 
       const appointmentDate = new Date(appointmentDateTime);
-      const timePart = appointmentDateTime.split("T")[1] || "00:00:00";
-      const slotTime = timePart.substring(0, 5);
 
       const dayOfWeek = appointmentDate
         .toLocaleDateString("en-US", {
           weekday: "long",
         })
         .toLowerCase();
+
+      const slotTime = appointmentDate.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
 
       console.log("Checking availability for:", { doctorId, dayOfWeek, startTime: slotTime });
 
