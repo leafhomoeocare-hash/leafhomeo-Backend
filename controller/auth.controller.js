@@ -635,17 +635,19 @@ exports.ForgetPassword = async (req, res) => {
       subject: "Password Reset OTP - Leaf Homeo",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Leaf Homeo Care</h1>
+          <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+            <img src="https://your-domain.com/Leaf-LOGO-Kit/PNG/App%20icon/final%20leaf%20logo_App%20icon.png" alt="Leaf Homeo Care Logo" style="width: 80px; height: 80px; margin-bottom: 15px; border-radius: 16px; background: white; padding: 10px;" />
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Leaf Homeo Care</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Natural Healing, Personalized Care</p>
           </div>
-          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
-            <h2 style="color: #145656; margin-top: 0;">Password Reset OTP</h2>
-            <p style="color: #374151; line-height: 1.6;">Your OTP for password reset is:</p>
-            <div style="background: #64a281; color: white; padding: 20px; border-radius: 5px; text-align: center; margin: 20px 0; font-size: 24px; font-weight: bold; letter-spacing: 2px;">
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
+            <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Password Reset OTP</h2>
+            <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your OTP for password reset is:</p>
+            <div style="background: linear-gradient(135deg, #64a281 0%, #528f6e 100%); color: white; padding: 25px; border-radius: 8px; text-align: center; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 4px;">
               ${otp}
             </div>
-            <p style="color: #374151; line-height: 1.6;">This code is valid for 10 minutes.</p>
-            <p style="color: #6b7280; margin-bottom: 0;">If you didn't request this, please ignore this email.</p>
+            <p style="color: #374151; line-height: 1.6; font-size: 15px;">This code is valid for 10 minutes.</p>
+            <p style="color: #6b7280; margin-bottom: 0; font-size: 14px;">If you didn't request this, please ignore this email.</p>
           </div>
         </div>
       `

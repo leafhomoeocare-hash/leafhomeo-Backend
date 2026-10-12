@@ -95,7 +95,7 @@ const sendAppointmentReminders = async () => {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
-              <div style="font-size: 32px; margin-bottom: 10px;">🌿</div>
+              <img src="https://your-domain.com/Leaf-LOGO-Kit/PNG/App%20icon/final%20leaf%20logo_App%20icon.png" alt="Leaf Homeo Care Logo" style="width: 80px; height: 80px; margin-bottom: 15px; border-radius: 16px; background: white; padding: 10px;" />
               <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Leaf Homeo Care</h1>
               <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Natural Healing, Personalized Care</p>
             </div>
@@ -203,7 +203,7 @@ const sendPaymentReminders = async () => {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
-              <div style="font-size: 32px; margin-bottom: 10px;">🌿</div>
+              <img src="https://your-domain.com/Leaf-LOGO-Kit/PNG/App%20icon/final%20leaf%20logo_App%20icon.png" alt="Leaf Homeo Care Logo" style="width: 80px; height: 80px; margin-bottom: 15px; border-radius: 16px; background: white; padding: 10px;" />
               <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Leaf Homeo Care</h1>
               <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Natural Healing, Personalized Care</p>
             </div>

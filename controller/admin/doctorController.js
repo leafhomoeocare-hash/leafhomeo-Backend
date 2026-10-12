@@ -119,17 +119,21 @@ exports.AddDoctor = async (req, res, next) => {
             .header {
               background: linear-gradient(135deg, #64a281 0%, #145656 100%);
               color: white;
-              padding: 30px;
+              padding: 40px 30px;
               text-align: center;
+            }
+            .header .logo {
+              font-size: 48px;
+              margin-bottom: 10px;
             }
             .header h1 {
               margin: 0;
               font-size: 28px;
-              font-weight: 600;
+              font-weight: bold;
             }
             .header p {
-              margin: 10px 0 0 0;
-              font-size: 16px;
+              margin: 8px 0 0 0;
+              font-size: 14px;
               opacity: 0.9;
             }
             .content {
@@ -203,8 +207,9 @@ exports.AddDoctor = async (req, res, next) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🌿 Leaf Homeo Care</h1>
-              <p>Welcome to Our Healthcare Platform</p>
+              <img src="https://your-domain.com/Leaf-LOGO-Kit/PNG/App%20icon/final%20leaf%20logo_App%20icon.png" alt="Leaf Homeo Care Logo" style="width: 80px; height: 80px; margin-bottom: 15px; border-radius: 16px; background: white; padding: 10px;" />
+              <h1>Leaf Homeo Care</h1>
+              <p>Natural Healing, Personalized Care</p>
             </div>
             <div class="content">
               <p class="welcome-text">Dear Dr. <strong>${name}</strong>,</p>

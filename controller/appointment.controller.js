@@ -870,6 +870,7 @@ exports.AppointmentDetails = async (req, res) => {
           specialization: appointment.doctor.specialization,
           qualification: appointment.doctor.qualification,
           experience: appointment.doctor.experience,
+          exp
         }
       : null;
 
@@ -883,6 +884,7 @@ exports.AppointmentDetails = async (req, res) => {
       createdAt: appointment.createdAt,
       acceptedAt: appointment.acceptedAt,
       doctor: doctorData,
+
     };
 
     return res.status(200).json({
