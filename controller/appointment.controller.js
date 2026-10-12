@@ -172,12 +172,6 @@ exports.AppointmentBooking = async (req, res, next) => {
         })
         .toLowerCase();
 
-      console.log("--- PARSED DATE & TIME (IST) ---");
-      console.log("Calculated Day Of Week:", dayOfWeek);
-      console.log("Calculated Slot Time (HH:mm):", slotTime);
-      console.log("Doctor ID:", doctorId);
-      console.log("Querying with:", { doctorId, dayOfWeek, startTime: slotTime, isAvailable: true });
-
       const availabilitySlot = await Availability.findOne({
         where: {
           doctorId,
@@ -187,20 +181,6 @@ exports.AppointmentBooking = async (req, res, next) => {
         },
         transaction,
       });
-
-      console.log("Availability Record Found in DB:", availabilitySlot ? "YES" : "NO");
-      if (!availabilitySlot) {
-        // Log all available slots for this doctor on this day for debugging
-        const allSlots = await Availability.findAll({
-          where: {
-            doctorId,
-            dayOfWeek,
-            isAvailable: true,
-          },
-          transaction,
-        });
-        console.log("All available slots for doctor on this day:", allSlots.map(s => s.startTime));
-      }
 
       if (!availabilitySlot) {
         await transaction.rollback();
