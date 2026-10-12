@@ -166,8 +166,11 @@ exports.AppointmentBooking = async (req, res, next) => {
       const timePart = appointmentDateTime.split("T")[1] || "00:00:00";
       const slotTime = timePart.substring(0, 5);
 
-      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-      const dayOfWeek = days[appointmentDate.getUTCDay()];
+      const dayOfWeek = appointmentDate
+        .toLocaleDateString("en-US", {
+          weekday: "long",
+        })
+        .toLowerCase();
 
       console.log("--- PARSED DATE & TIME (IST) ---");
       console.log("Calculated Day Of Week:", dayOfWeek);
