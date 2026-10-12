@@ -175,15 +175,19 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       const appointmentDate = new Date(appointmentDateTime);
 
+      // Use local day of week (not UTC) to match doctor's availability configuration
       const dayOfWeek = appointmentDate
         .toLocaleDateString("en-US", {
           weekday: "long",
+          timeZone: "Asia/Kolkata"
         })
         .toLowerCase();
 
+      // Use local time (not UTC) to match doctor's availability configuration
       const slotTime = appointmentDate.toLocaleTimeString("en-GB", {
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
+        timeZone: "Asia/Kolkata"
       });
 
       console.log("Checking availability for:", { doctorId, dayOfWeek, startTime: slotTime });
