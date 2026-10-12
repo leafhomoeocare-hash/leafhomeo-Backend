@@ -113,9 +113,12 @@ exports.AppointmentBooking = async (req, res, next) => {
 
   try {
     const userId = req.user.id;
+    console.log("=== BOOKING DEBUG ===");
+    console.log("User ID:", userId);
+    console.log("Request Body:", req.body);
 
     const patient = await Patient.findOne({
-      where: { 
+      where: {
         userId,
         isDeleted: false,
       },
@@ -124,6 +127,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
     if (!patient) {
       await transaction.rollback();
+      console.log("ERROR: Patient profile not found");
       return res.status(404).json({
         status: 0,
         message: "Patient profile not found",
@@ -133,8 +137,14 @@ exports.AppointmentBooking = async (req, res, next) => {
     const patientId = patient.id;
     const { doctorId, requestType, appointmentDateTime, reason } = req.body;
 
+    console.log("Patient ID:", patientId);
+    console.log("Request Type:", requestType);
+    console.log("Doctor ID:", doctorId);
+    console.log("Appointment DateTime:", appointmentDateTime);
+
     if (!requestType || !appointmentDateTime) {
       await transaction.rollback();
+      console.log("ERROR: Required fields missing");
       return res.status(400).json({
         status: 0,
         message: "Required fields are missing",
@@ -143,6 +153,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
     if (requestType === "specific_doctor" && !doctorId) {
       await transaction.rollback();
+      console.log("ERROR: Doctor ID required for specific_doctor");
       return res.status(400).json({
         status: 0,
         message: "Doctor ID is required for specific doctor request",
@@ -172,6 +183,8 @@ exports.AppointmentBooking = async (req, res, next) => {
         })
         .toLowerCase();
 
+      console.log("Checking availability for:", { doctorId, dayOfWeek, startTime: slotTime });
+
       const availabilitySlot = await Availability.findOne({
         where: {
           doctorId,
@@ -181,6 +194,16 @@ exports.AppointmentBooking = async (req, res, next) => {
         },
         transaction,
       });
+
+      console.log("Availability slot found:", availabilitySlot ? "YES" : "NO");
+      if (!availabilitySlot) {
+        console.log("ERROR: Slot not available");
+        await transaction.rollback();
+        return res.status(400).json({
+          status: 0,
+          message: "Selected time slot is not available for this doctor",
+        });
+      }
 
       if (!availabilitySlot) {
         await transaction.rollback();
