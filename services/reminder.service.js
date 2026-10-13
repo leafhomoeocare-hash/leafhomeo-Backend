@@ -1,4 +1,4 @@
-const { Appointment, Patient, Doctor, Notification, User, Payment } = require('../models');
+const { Appointment, Patient, Doctor, Notification, User } = require('../models');
 const { Op } = require('sequelize');
 const nodemailer = require('nodemailer');
 
@@ -289,7 +289,7 @@ const cancelPendingAppointments = async () => {
       }
 
       const cancellationReason = appointment.status === 'payment_pending' ? 'timeout_paid' :
-                                 appointment.status === 'accepted' ? 'timeout_accepted' : 'timeout_pending';
+                                 appointment.status === 'accepted' ? 'timeout_pending' : 'timeout_pending';
 
       await Appointment.update(
         {
