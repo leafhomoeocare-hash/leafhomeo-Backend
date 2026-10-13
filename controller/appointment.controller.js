@@ -128,6 +128,9 @@ exports.AppointmentBooking = async (req, res, next) => {
     if (!patient) {
       await transaction.rollback();
       console.log("ERROR: Patient profile not found");
+
+      console.log(patient,"<<<<<patient>>>>>");
+      
       return res.status(404).json({
         status: 0,
         message: "Patient profile not found",
