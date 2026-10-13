@@ -61,6 +61,7 @@ const Appointment = sequelize.define(
       type: DataTypes.ENUM(
         "timeout_pending",
         "timeout_paid",
+        "timeout_accepted",
         "no_show_both",
         "doctor_no_show",
         "patient_no_show",
