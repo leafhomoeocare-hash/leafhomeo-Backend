@@ -897,8 +897,7 @@ exports.AppointmentDetails = async (req, res) => {
           specialization: appointment.doctor.specialization,
           qualification: appointment.doctor.qualification,
           experience: appointment.doctor.experience,
-          exp
-        }
+          consultationFee: appointment.doctor.consultationFee,}
       : null;
 
     const responseData = {
