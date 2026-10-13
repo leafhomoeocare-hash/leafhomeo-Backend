@@ -81,7 +81,8 @@ exports.AvailabilitySlots = async (req,res,next )=>{
       const d = new Date(a.appointmentDateTime);
       return d.toLocaleTimeString("en-GB", {
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
+        timeZone: "Asia/Kolkata"
       });
     });
 
