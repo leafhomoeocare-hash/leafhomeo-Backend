@@ -223,21 +223,48 @@ exports.AppointmentBooking = async (req, res, next) => {
         });
       }
 
-      const existingAppointment = await Appointment.findOne({
+      console.log("Checking for existing appointments on same slot...");
+
+      // Use local date range for checking existing appointments (IST timezone)
+      const localDate = new Date(appointmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      const startOfDay = new Date(localDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(localDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      console.log("Checking appointments between:", startOfDay, "and", endOfDay);
+
+      const existingAppointments = await Appointment.findAll({
         where: {
           doctorId,
-          appointmentDateTime: new Date(appointmentDateTime),
+          appointmentDateTime: {
+            [Op.between]: [startOfDay, endOfDay]
+          },
           status: { [Op.notIn]: ["cancelled"] },
         },
         transaction,
       });
 
-      if (existingAppointment) {
-        await transaction.rollback();
-        return res.status(400).json({
-          status: 0,
-          message: "This time slot is already booked",
+      console.log("Found existing appointments on same day:", existingAppointments.length);
+
+      // Check if any existing appointment has the same slot time
+      for (const existing of existingAppointments) {
+        const existingSlotTime = new Date(existing.appointmentDateTime).toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Asia/Kolkata"
         });
+
+        console.log("Existing appointment slot:", existingSlotTime, "Requested slot:", slotTime);
+
+        if (existingSlotTime === slotTime) {
+          console.log("ERROR: Slot already booked by appointment:", existing.id);
+          await transaction.rollback();
+          return res.status(400).json({
+            status: 0,
+            message: "This time slot is already booked",
+          });
+        }
       }
     }
 
