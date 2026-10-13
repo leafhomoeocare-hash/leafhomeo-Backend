@@ -114,11 +114,11 @@ sequelize
 //   })
 //   .catch(console.error);
 
-// Schedule reminder checks - run every hour using setInterval
+// Schedule reminder checks - run every 5 minutes using setInterval
 setInterval(async () => {
   console.log('Running scheduled reminder checks...');
   await reminderService.runReminderChecks();
-}, 60 * 60 * 1000); // Every hour
+}, 5 * 60 * 1000); // Every 5 minutes
 // error handler
 app.use(function(err, req, res, next) {
   // set locals, only providing error in development
