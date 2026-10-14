@@ -16,6 +16,10 @@ const sequelize = require("../config/database");
 exports.AvailabilitySlots = async (req,res,next )=>{
   try {
     const { doctorId, date } = req.body;
+    console.log("=== AVAILABILITY SLOTS CHECK ===");
+    console.log("Doctor ID:", doctorId);
+    console.log("Selected Date:", date);
+
     if (!doctorId || !date) {
       return res.status(400).json({
         status: 0,
@@ -26,26 +30,31 @@ exports.AvailabilitySlots = async (req,res,next )=>{
     // Validate doctor exists
     const doctor = await Doctor.findByPk(doctorId);
     if (!doctor) {
+      console.log("ERROR: Doctor not found");
       return res.status(404).json({
         status: 0,
         message: "Doctor not found"
       });
     }
+    console.log("Doctor found:", doctor.id);
 
     // Validate date format
     const selectedDate = new Date(date);
     if (isNaN(selectedDate.getTime())) {
+      console.log("ERROR: Invalid date format");
       return res.status(400).json({
         status: 0,
         message: "Invalid date format"
       });
     }
+    console.log("Parsed Date:", selectedDate);
 
     const dayOfWeek = selectedDate
       .toLocaleDateString("en-US", {
         weekday: "long",
       })
       .toLowerCase();
+    console.log("Day of Week:", dayOfWeek);
 
     const availability = await Availability.findAll({
       where: {
@@ -54,8 +63,10 @@ exports.AvailabilitySlots = async (req,res,next )=>{
         isAvailable: true
       }
     });
+    console.log("Available slots in DB:", availability.length);
 
     if (!availability.length) {
+      console.log("No availability slots found for this day");
       return res.status(200).json({
         status: 1,
         slots: []
@@ -64,6 +75,7 @@ exports.AvailabilitySlots = async (req,res,next )=>{
 
     const startOfDay = `${date} 00:00:00`;
     const endOfDay = `${date} 23:59:59`;
+    console.log("Checking appointments between:", startOfDay, "and", endOfDay);
 
     const appointments = await Appointment.findAll({
       where: {
@@ -76,6 +88,7 @@ exports.AvailabilitySlots = async (req,res,next )=>{
         }
       }
     });
+    console.log("Booked appointments found:", appointments.length);
 
     const bookedSlots = appointments.map((a) => {
       const d = new Date(a.appointmentDateTime);
@@ -85,11 +98,14 @@ exports.AvailabilitySlots = async (req,res,next )=>{
         timeZone: "Asia/Kolkata"
       });
     });
+    console.log("Booked slot times:", bookedSlots);
 
     // Buffer time: 8 hours - slots should only be available 8 hours before current time
     const BUFFER_HOURS = 8;
     const now = new Date();
     const bufferTime = new Date(now.getTime() + BUFFER_HOURS * 60 * 60 * 1000);
+    console.log("Current time:", now);
+    console.log("Buffer time (8 hours from now):", bufferTime);
 
     const slots = availability.map((item) => {
       // Parse slot time to check against buffer
@@ -101,6 +117,8 @@ exports.AvailabilitySlots = async (req,res,next )=>{
       const isWithinBuffer = slotDateTime <= bufferTime;
       const isBooked = bookedSlots.includes(item.startTime);
 
+      console.log(`Slot ${item.startTime}: DateTime=${slotDateTime}, WithinBuffer=${isWithinBuffer}, Booked=${isBooked}, Available=${!isBooked && !isWithinBuffer}`);
+
       return {
         id: item.id,
         time: item.startTime,
@@ -108,7 +126,8 @@ exports.AvailabilitySlots = async (req,res,next )=>{
       };
     });
 
-    console.log(date,dayOfWeek,slots);
+    console.log("Final slots response:", slots);
+    console.log("=== AVAILABILITY CHECK END ===");
     
     return res.status(200).json({
       status: 1,
@@ -118,7 +137,7 @@ exports.AvailabilitySlots = async (req,res,next )=>{
     });
 
   } catch (error) {
-    console.log(error);
+    console.log("ERROR in AvailabilitySlots:", error);
     return res.status(500).json({
       status: 0,
       message: error.message
