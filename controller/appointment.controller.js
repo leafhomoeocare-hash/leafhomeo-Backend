@@ -86,11 +86,27 @@ exports.AvailabilitySlots = async (req,res,next )=>{
       });
     });
 
-    const slots = availability.map((item) => ({
-      id: item.id,
-      time: item.startTime,
-      available: !bookedSlots.includes(item.startTime)
-    }));
+    // Buffer time: 8 hours - slots should only be available 8 hours before current time
+    const BUFFER_HOURS = 8;
+    const now = new Date();
+    const bufferTime = new Date(now.getTime() + BUFFER_HOURS * 60 * 60 * 1000);
+
+    const slots = availability.map((item) => {
+      // Parse slot time to check against buffer
+      const [hours, minutes] = item.startTime.split(':').map(Number);
+      const slotDateTime = new Date(selectedDate);
+      slotDateTime.setHours(hours, minutes, 0, 0);
+
+      // Check if slot is within buffer time
+      const isWithinBuffer = slotDateTime <= bufferTime;
+      const isBooked = bookedSlots.includes(item.startTime);
+
+      return {
+        id: item.id,
+        time: item.startTime,
+        available: !isBooked && !isWithinBuffer
+      };
+    });
 
     console.log(date,dayOfWeek,slots);
     

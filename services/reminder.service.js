@@ -1,4 +1,4 @@
-const { Appointment, Patient, Doctor, Notification, User, Payment } = require('../models');
+const { Appointment, Patient, Doctor, Notification, User } = require('../models');
 const { Op } = require('sequelize');
 const nodemailer = require('nodemailer');
 
@@ -298,6 +298,65 @@ const cancelPendingAppointments = async () => {
         },
         { where: { id: appointment.id } }
       );
+
+      // Send notification to patient
+      if (appointment.patient) {
+        let message;
+        if (appointment.status === 'payment_pending') {
+          message = 'Your appointment has been automatically cancelled as the scheduled time has passed and payment was not completed.';
+        } else if (appointment.status === 'accepted') {
+          message = 'Your appointment has been automatically cancelled as the scheduled time has passed and payment was not completed.';
+        } else {
+          message = 'Your appointment has been automatically cancelled as the scheduled time has passed and it was not accepted.';
+        }
+
+        await Notification.create({
+          userId: appointment.patient.userId,
+          senderId: null,
+          title: 'Appointment Cancelled',
+          message: message,
+          type: 'appointment',
+          referenceId: appointment.id,
+          isRead: false
+        });
+
+        // Get patient user details for email
+        const patientUser = await User.findByPk(appointment.patient.userId);
+        if (patientUser) {
+          let reasonText;
+          if (appointment.status === 'payment_pending') {
+            reasonText = 'Payment was not completed before the scheduled time';
+          } else if (appointment.status === 'accepted') {
+            reasonText = 'Payment was not completed before the scheduled time';
+          } else {
+            reasonText = 'Appointment was not accepted before the scheduled time';
+          }
+
+          await sendEmail({
+            to: patientUser.email,
+            subject: 'Appointment Cancelled - Leaf Homeo',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #64a281 0%, #145656 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                  <img src="https://your-domain.com/Leaf-LOGO-Kit/PNG/App%20icon/final%20leaf%20logo_App%20icon.png" alt="Leaf Homeo Care Logo" style="width: 80px; height: 80px; margin-bottom: 15px; border-radius: 16px; background: white; padding: 10px;" />
+                  <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Leaf Homeo Care</h1>
+                  <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Natural Healing, Personalized Care</p>
+                </div>
+                <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
+                  <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Cancelled</h2>
+                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patientUser.name},</p>
+                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${new Date(appointment.appointmentDateTime).toLocaleString()}</strong> has been automatically cancelled.</p>
+                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Reason: ${reasonText}.</p>
+                  <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
+                    <p style="margin: 0; font-weight: bold; font-size: 16px;">⏰ Time Expired</p>
+                  </div>
+                  <p style="color: #6b7280; margin-bottom: 0; font-size: 14px;">Please book a new appointment at your convenience.<br><strong style="color: #145656;">Leaf Homeo Team</strong></p>
+                </div>
+              </div>
+            `
+          });
+        }
+      }
 
       console.log(`Cancelled appointment ${appointment.id} - Status was: ${appointment.status}`);
     }
