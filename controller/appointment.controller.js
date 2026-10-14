@@ -112,12 +112,15 @@ exports.AvailabilitySlots = async (req,res,next )=>{
       const [hours, minutes] = item.startTime.split(':').map(Number);
       const slotDateTime = new Date(selectedDate);
       slotDateTime.setHours(hours, minutes, 0, 0);
+      
+      // Convert slot time to UTC for proper comparison with buffer time
+      const slotDateTimeUTC = new Date(slotDateTime.toLocaleString('en-US', { timeZone: 'UTC' }));
 
       // Check if slot is within buffer time
-      const isWithinBuffer = slotDateTime <= bufferTime;
+      const isWithinBuffer = slotDateTimeUTC <= bufferTime;
       const isBooked = bookedSlots.includes(item.startTime);
 
-      console.log(`Slot ${item.startTime}: DateTime=${slotDateTime}, WithinBuffer=${isWithinBuffer}, Booked=${isBooked}, Available=${!isBooked && !isWithinBuffer}`);
+      console.log(`Slot ${item.startTime}: DateTime=${slotDateTime}, DateTimeUTC=${slotDateTimeUTC}, WithinBuffer=${isWithinBuffer}, Booked=${isBooked}, Available=${!isBooked && !isWithinBuffer}`);
 
       return {
         id: item.id,
