@@ -591,6 +591,12 @@ exports.myAppointments = async (req, res) => {
               ]
             }
           ]
+        },
+        {
+          model: Payment,
+          as: "payment",
+          attributes: ["status", "amount"],
+          required: false
         }
       ],
 
@@ -614,7 +620,9 @@ exports.myAppointments = async (req, res) => {
       requestType: item.requestType,
       specialization: item.doctor?.specialization || null,
       experience: item.doctor?.experience || null,
-      qualification: item.doctor?.qualification || null
+      qualification: item.doctor?.qualification || null,
+      paymentStatus: item.payment?.status || 'pending',
+      paymentAmount: item.payment?.amount || null
     }));
 
     return res.status(200).json({
