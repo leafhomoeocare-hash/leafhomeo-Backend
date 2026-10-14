@@ -113,8 +113,8 @@ exports.AvailabilitySlots = async (req,res,next )=>{
       const slotDateTime = new Date(selectedDate);
       slotDateTime.setHours(hours, minutes, 0, 0);
       
-      // Convert slot time to UTC for proper comparison with buffer time
-      const slotDateTimeUTC = new Date(slotDateTime.toLocaleString('en-US', { timeZone: 'UTC' }));
+      // Convert IST slot time to UTC (IST = UTC+5:30)
+      const slotDateTimeUTC = new Date(slotDateTime.getTime() - (5 * 60 + 30) * 60 * 1000);
 
       // Check if slot is within buffer time
       const isWithinBuffer = slotDateTimeUTC <= bufferTime;
