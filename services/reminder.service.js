@@ -1,4 +1,4 @@
-const { Appointment, Patient, Doctor, Notification, User } = require('../models');
+const { Appointment, Patient, Doctor, Notification, User ,Payment} = require('../models');
 const { Op } = require('sequelize');
 const nodemailer = require('nodemailer');
 
