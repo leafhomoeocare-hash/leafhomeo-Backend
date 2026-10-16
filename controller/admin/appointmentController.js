@@ -52,7 +52,7 @@ exports.GetAppointments = async (req, res, next) => {
         {
           model: Consultation,
           as: "consultation",
-          attributes: ["id", "chiefComplaints", "perception", "callDuration"],
+          attributes: ["id", "chiefComplaints", "perception"],
         },
       ],
       // 2. Dynamic Search Path adjusted as per your exact aliases
@@ -89,8 +89,6 @@ exports.GetAppointments = async (req, res, next) => {
       shiprocketOrderId: appt.shiprocketOrderId,
       trackingUrl: appt.trackingUrl,
       courierName: appt.courierName,
-      shippingStatus: appt.shippingStatus,
-      trackerId: appt.trackerId,
       patient: appt.patient && appt.patient.user
         ? {
             id: appt.patient.id,
@@ -139,7 +137,6 @@ exports.GetAppointments = async (req, res, next) => {
             id: appt.consultation.id,
             chiefComplaints: appt.consultation.chiefComplaints,
             perception: appt.consultation.perception,
-            callDuration: appt.consultation.callDuration,
           }
         : null,
     }));

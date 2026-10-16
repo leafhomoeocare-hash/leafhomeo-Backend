@@ -128,9 +128,12 @@ try {
     const doctorsWithRatings = verifiedDoctors.map(doctor => ({
       ...doctor.toJSON(),
       averageRating: ratingMap[doctor.id]?.averageRating || "0.0",
-      
       totalReviews: ratingMap[doctor.id]?.totalReviews || 0,
     }));
+
+    // Sort by total reviews (descending)
+    doctorsWithRatings.sort((a, b) => b.totalReviews - a.totalReviews);
+
 console.log(doctorsWithRatings,"DOCTORS");
    return res.status(200).json({
       status: 1,
