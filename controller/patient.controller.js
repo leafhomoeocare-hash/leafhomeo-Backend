@@ -131,8 +131,8 @@ try {
       totalReviews: ratingMap[doctor.id]?.totalReviews || 0,
     }));
 
-    // Sort by total reviews (descending)
-    doctorsWithRatings.sort((a, b) => b.totalReviews - a.totalReviews);
+    // Sort by average rating (descending - highest stars first)
+    doctorsWithRatings.sort((a, b) => parseFloat(b.averageRating) - parseFloat(a.averageRating));
 
 console.log(doctorsWithRatings,"DOCTORS");
    return res.status(200).json({
