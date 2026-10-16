@@ -571,7 +571,11 @@ exports.myAppointments = async (req, res) => {
         "appointmentDateTime",
         "reason",
         "appointmentId",
-        "requestType"
+        "requestType",
+        "shippingStatus",
+        "trackerId",
+        "trackingUrl",
+        "courierName"
       ],
 
       include: [
@@ -622,7 +626,11 @@ exports.myAppointments = async (req, res) => {
       experience: item.doctor?.experience || null,
       qualification: item.doctor?.qualification || null,
       paymentStatus: item.payment?.status || 'pending',
-      paymentAmount: item.payment?.amount || null
+      paymentAmount: item.payment?.amount || null,
+      shippingStatus: item.shippingStatus || null,
+      trackerId: item.trackerId || null,
+      trackingUrl: item.trackingUrl || null,
+      courierName: item.courierName || null
     }));
 
     return res.status(200).json({
@@ -946,6 +954,20 @@ exports.AppointmentDetails = async (req, res) => {
 
     const appointment = await Appointment.findOne({
       where: { id: appointmentId },
+      attributes: [
+        "id",
+        "appointmentId",
+        "status",
+        "requestType",
+        "appointmentDateTime",
+        "reason",
+        "createdAt",
+        "acceptedAt",
+        "shippingStatus",
+        "trackerId",
+        "trackingUrl",
+        "courierName"
+      ],
       include: [
         {
           model: Doctor,
@@ -987,6 +1009,10 @@ exports.AppointmentDetails = async (req, res) => {
       createdAt: appointment.createdAt,
       acceptedAt: appointment.acceptedAt,
       doctor: doctorData,
+      shippingStatus: appointment.shippingStatus,
+      trackerId: appointment.trackerId,
+      trackingUrl: appointment.trackingUrl,
+      courierName: appointment.courierName
 
     };
 
