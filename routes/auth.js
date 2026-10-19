@@ -19,10 +19,15 @@ router.delete('/notification/:notificationId', authmiddleware, authController.De
 router.put('/notification/:notificationId/mark-read', authmiddleware, authController.MarkNotificationAsRead);
 router.put('/notifications/mark-all-read', authmiddleware, authController.MarkAllNotificationsAsRead);
 router.delete('/truncate-notifications', authmiddleware, authController.TruncateNotifications);
-router.post('/add-token',authmiddleware,authController.UpdateFcmToken)
+router.post('/add-token', authmiddleware, authController.UpdateFcmToken)
 // Phone verification routes
 router.post('/send-phone-otp', authController.SendPhoneOTP);
 router.post('/verify-phone-otp', authController.VerifyPhoneOTP);
+router.post('/update-email', authmiddleware, authController.UpdateEmail);
+router.post('/update-mobile', authmiddleware, authController.UpdateMobile);
+// Email verification routes
+router.post('/send-email-otp', authController.SendEmailOTP);
+router.post('/verify-email-otp', authController.VerifyEmailOTP);
 // Terms and conditions route
 router.get('/terms-conditions', authController.GetTermsConditions);
 module.exports = router;

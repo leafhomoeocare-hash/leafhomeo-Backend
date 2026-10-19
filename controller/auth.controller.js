@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { User, Doctor, Patient,Appointment,Payment } = require("../models");
+const { User, Doctor, Patient, Appointment, Payment } = require("../models");
 const { Op } = require("sequelize");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
@@ -9,16 +9,17 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const Sequelize = require("sequelize");
 const Notification = require("../models/Notification");
 const twilioConfig = require("../config/twilio");
+const emailOtpService = require("../services/emailOtp.service");
 
 
 
 
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, mobile, password, otp, termsAccepted, phoneVerified } = req.body;
+    const { name, email, mobile, password, otp, termsAccepted, phoneVerified, emailVerified, isEmailVerified } = req.body;
 
     // Validation
-    if (!name || !email || !mobile || !password || termsAccepted === undefined)  {
+    if (!name || !email || !mobile || !password || termsAccepted === undefined) {
       return res.status(400).json({
         status: 0,
         message: "All fields are required including terms acceptance",
@@ -73,6 +74,10 @@ exports.register = async (req, res, next) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Check if email was pre-verified in session or passed from frontend
+    const preVerified = await emailOtpService.isEmailVerified(email);
+    const verifiedEmailStatus = Boolean(isEmailVerified || emailVerified || preVerified);
+
     // Create User with formatted mobile number
     const user = await User.create({
       name,
@@ -81,8 +86,14 @@ exports.register = async (req, res, next) => {
       password: hashedPassword,
       role: "patient",
       isPhoneVerified: true,
+      isEmailVerified: verifiedEmailStatus,
       termsAccepted: true,
     });
+
+    // Consume pre-verification token if any
+    if (preVerified) {
+      await emailOtpService.consumeEmailVerification(email);
+    }
 
     // Create Patient Profile
     const patient = await Patient.create({
@@ -101,6 +112,7 @@ exports.register = async (req, res, next) => {
         patientId: patient.id,
         IsCompleteProfile: patient.IsCompleteProfile,
         isPhoneVerified: user.isPhoneVerified,
+        isEmailVerified: user.isEmailVerified,
         termsAccepted: user.termsAccepted,
       },
     });
@@ -126,8 +138,8 @@ exports.register = async (req, res, next) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log(req.body,"boDY");
-    
+    console.log(req.body, "boDY");
+
 
     if (!email || !password) {
       return res.status(400).json({
@@ -150,7 +162,7 @@ exports.login = async (req, res) => {
     }
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       },
@@ -282,6 +294,8 @@ exports.GetUser = async (req, res) => {
       mobile: userData.mobile,
       role: userData.role,
       image: userData.image,
+      isEmailVerified: userData.isEmailVerified,
+      isPhoneVerified: userData.isPhoneVerified,
     };
 
     // Only include relevant profile based on user role
@@ -314,54 +328,54 @@ exports.GetUser = async (req, res) => {
   }
 };
 exports.ChangePassword = async (req, res) => {
-    try {
-        const userId = req.user?.id;
-        const { oldPassword, newPassword } = req.body;
+  try {
+    const userId = req.user?.id;
+    const { oldPassword, newPassword } = req.body;
 
-        console.log("BODY:", req.body);
-        
-        // 1. Validation check
-        if (!oldPassword || !newPassword) {
-            return res.status(400).json({
-                status: 0,
-                message: "Old password and new password are required",
-            });
-        }
+    console.log("BODY:", req.body);
 
-        // 2. User existence check
-        const user = await User.findByPk(userId);
-        if (!user) {
-            return res.status(404).json({
-                status: 0,
-                message: "User not found",
-            });
-        }
-
-        // 3. Password match check
-        const isMatch = await bcrypt.compare(oldPassword, user.password);
-        if (!isMatch) {
-            return res.status(400).json({
-                status: 0,
-                message: "Old password is incorrect",
-            });
-        }
-
-        // 4. Hash and update
-        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-        await user.update({ password: hashedNewPassword });
-
-        return res.status(200).json({
-            status: 1,
-            message: "Password changed successfully",
-        });
-        
-    } catch (error) {
-        console.error("ChangePassword Error:", error); 
-        return res.status(500).json({   
-            status: 0,
-            message: "Something went wrong",
-        });
+    // 1. Validation check
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        status: 0,
+        message: "Old password and new password are required",
+      });
     }
+
+    // 2. User existence check
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        status: 0,
+        message: "User not found",
+      });
+    }
+
+    // 3. Password match check
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({
+        status: 0,
+        message: "Old password is incorrect",
+      });
+    }
+
+    // 4. Hash and update
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await user.update({ password: hashedNewPassword });
+
+    return res.status(200).json({
+      status: 1,
+      message: "Password changed successfully",
+    });
+
+  } catch (error) {
+    console.error("ChangePassword Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong",
+    });
+  }
 };
 
 exports.UpdateProfile = async (req, res) => {
@@ -386,20 +400,20 @@ exports.UpdateProfile = async (req, res) => {
     } = req.body;
     const image = req.file ? req.file.path : null;
 
-    if (!name || !email || !mobile) {
+    if (!name) {
       await transaction.rollback();
       return res.status(400).json({
         status: 0,
-        message: "Name, email and mobile are required",
+        message: "Name is required",
       });
     }
 
-    const user = await User.findByPk(userId, { 
+    const user = await User.findByPk(userId, {
       where: { isDeleted: false },
-      transaction 
+      transaction
     });
     const patient = await Patient.findOne({
-      where: { 
+      where: {
         userId,
         isDeleted: false,
       },
@@ -414,34 +428,32 @@ exports.UpdateProfile = async (req, res) => {
       });
     }
 
-    // Check if email or mobile already exists for another user
-    if (email || mobile) {
-      const existingUser = await User.findOne({
-        where: {
-          [Op.or]: [
-            ...(email ? [{ email }] : []),
-            ...(mobile ? [{ mobile }] : []),
-          ],
-          id: { [Op.ne]: userId },
-        },
-        transaction,
+    // Disallow modifying email or mobile directly through update-profile
+    if (email && email.trim().toLowerCase() !== user.email.toLowerCase()) {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 0,
+        message: "Email cannot be changed directly. Please use the Change Email verification option.",
       });
-
-      if (existingUser) {
-        await transaction.rollback();
-        return res.status(400).json({
-          status: 0,
-          message: existingUser.email === email ? "Email already exists" : "Mobile already exists",
-        });
-      }
     }
 
-    // Update User
+    if (
+      mobile &&
+      mobile.trim() !== user.mobile &&
+      mobile.trim() !== user.mobile.replace(/^\+91/, "") &&
+      "+91" + mobile.replace(/\D/g, "") !== user.mobile
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 0,
+        message: "Mobile number cannot be changed directly. Please use the Change Mobile Number verification option.",
+      });
+    }
+
+    // Update User (preserve verified email and mobile)
     await user.update(
       {
         name,
-        email,
-        mobile,
         ...(image && { image }),
       },
       { transaction }
@@ -481,6 +493,8 @@ exports.UpdateProfile = async (req, res) => {
         email: user.email,
         mobile: user.mobile,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        isPhoneVerified: user.isPhoneVerified,
         IsCompleteProfile: patient?.IsCompleteProfile || false,
       },
     });
@@ -498,8 +512,8 @@ exports.CompleteProfile = async (req, res) => {
 
   try {
     const userId = req.user.id;
-    console.log(userId,"userId");
-const image = req.file ? req.file.path : null;
+    console.log(userId, "userId");
+    const image = req.file ? req.file.path : null;
     const {
       name,
       gender,
@@ -514,14 +528,14 @@ const image = req.file ? req.file.path : null;
       country,
     } = req.body;
 
-    const user = await User.findByPk(userId, { 
+    const user = await User.findByPk(userId, {
       where: { isDeleted: false },
-      transaction 
+      transaction
     });
     console.log("User found:", !!user);
 
     let patient = await Patient.findOne({
-      where: { 
+      where: {
         userId,
         isDeleted: false,
       },
@@ -596,7 +610,7 @@ exports.ForgetPassword = async (req, res) => {
     const { email } = req.body;
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       }
@@ -627,7 +641,7 @@ exports.ForgetPassword = async (req, res) => {
         pass: process.env.EMAIL_PASS
       }
     });
-    console.log(transporter,"EMAIL PASS")
+    console.log(transporter, "EMAIL PASS")
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -676,7 +690,7 @@ exports.VerifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       }
@@ -736,7 +750,7 @@ exports.ResetPassword = async (req, res) => {
     }
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       },
@@ -798,7 +812,7 @@ exports.SetupPassword = async (req, res) => {
     }
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       },
@@ -989,7 +1003,7 @@ exports.MarkAllNotificationsAsRead = async (req, res) => {
   }
 };
 
-    exports.TruncateNotifications = async (req, res) => {
+exports.TruncateNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -1035,7 +1049,7 @@ exports.DeleteUser = async (req, res) => {
     // Doctor
     if (user.role === "doctor") {
       const doctor = await Doctor.findOne({
-        where: { 
+        where: {
           userId,
           isDeleted: false,
         },
@@ -1053,7 +1067,7 @@ exports.DeleteUser = async (req, res) => {
     // Patient
     if (user.role === "patient") {
       const patient = await Patient.findOne({
-        where: { 
+        where: {
           userId,
           isDeleted: false,
         },
@@ -1142,13 +1156,30 @@ exports.SendPhoneOTP = async (req, res) => {
       formattedMobile = '+91' + mobile.replace(/\D/g, ''); // Remove non-digits and add +91
     }
 
-    // Check if mobile already exists (check both formatted and original)
+    // Check optional authenticated user
+    let currentUserId = null;
+    if (req.headers.authorization) {
+      try {
+        const authHeader = req.headers.authorization;
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded && decoded.id) {
+          currentUserId = decoded.id;
+        }
+      } catch (e) {
+        // optional auth, proceed if invalid
+      }
+    }
+
+    // Check if mobile already exists for ANOTHER user
     const existingUser = await User.findOne({
       where: {
         [Op.or]: [
           { mobile: formattedMobile },
           { mobile: mobile }
         ],
+        isDeleted: false,
+        ...(currentUserId ? { id: { [Op.ne]: currentUserId } } : {}),
       },
     });
 
@@ -1209,10 +1240,10 @@ exports.VerifyPhoneOTP = async (req, res) => {
     // Verify OTP using Twilio Verify or fallback
     try {
       const verificationCheck = await twilioConfig.verifyOTP(formattedMobile, otp);
-      
+
       // Handle both Twilio response and fallback response
       const isValid = verificationCheck.status === 'approved' || verificationCheck.valid === true;
-      
+
       if (isValid) {
         return res.status(200).json({
           status: 1,
@@ -1277,3 +1308,309 @@ exports.GetTermsConditions = async (req, res) => {
     });
   }
 };
+
+/**
+ * 1. Send Email OTP (Two API Approach)
+ * Generates OTP, stores in Redis/Memory with expiration & rate limits, sends via Nodemailer
+ * Does NOT return OTP in response body
+ */
+exports.SendEmailOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email is required",
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        status: 0,
+        message: "Invalid email address format",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check optional authenticated user
+    let currentUserId = null;
+    if (req.headers.authorization) {
+      try {
+        const authHeader = req.headers.authorization;
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded && decoded.id) {
+          currentUserId = decoded.id;
+        }
+      } catch (e) {
+        // optional auth, proceed if invalid
+      }
+    }
+
+    // Check if email already registered to ANOTHER user
+    const existingUser = await User.findOne({
+      where: {
+        email: normalizedEmail,
+        isDeleted: false,
+        ...(currentUserId ? { id: { [Op.ne]: currentUserId } } : {}),
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email already registered",
+      });
+    }
+
+    // Send OTP via emailOtpService
+    try {
+      await emailOtpService.sendOTP(normalizedEmail);
+
+      return res.status(200).json({
+        status: 1,
+        message: "OTP sent successfully",
+      });
+    } catch (sendError) {
+      console.error("SendEmailOTP Service Error:", sendError);
+      const statusCode = sendError.statusCode || 500;
+      return res.status(statusCode).json({
+        status: 0,
+        message: sendError.message || "Failed to send OTP email. Please try again.",
+      });
+    }
+  } catch (error) {
+    console.error("SendEmailOTP Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong",
+    });
+  }
+};
+
+/**
+ * 2. Verify Email OTP (Two API Approach)
+ * Verifies submitted OTP against Redis/Memory store
+ * Handles valid, invalid, expired, and brute-force protection
+ */
+exports.VerifyEmailOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email and OTP are required",
+      });
+    }
+
+    const result = await emailOtpService.verifyOTP(email, otp);
+
+    if (result.status === "approved") {
+      return res.status(200).json({
+        status: 1,
+        message: "Email verified successfully",
+      });
+    } else if (result.status === "expired") {
+      return res.status(400).json({
+        status: 0,
+        message: "OTP has expired. Please request a new OTP.",
+      });
+    } else if (result.status === "too_many_attempts") {
+      return res.status(429).json({
+        status: 0,
+        message: "Too many failed attempts. Please request a new OTP.",
+      });
+    } else {
+      // result.status === 'denied'
+      return res.status(400).json({
+        status: 0,
+        message: "Invalid OTP",
+      });
+    }
+  } catch (error) {
+    console.error("VerifyEmailOTP Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong",
+    });
+  }
+};
+
+/**
+ * Update Email with OTP verification (authenticated)
+ */
+exports.UpdateEmail = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email and OTP are required",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({
+        status: 0,
+        message: "Invalid email address format",
+      });
+    }
+
+    // Check if email is already used by another user
+    const existingUser = await User.findOne({
+      where: {
+        email: normalizedEmail,
+        id: { [Op.ne]: userId },
+        isDeleted: false,
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email is already registered with another account",
+      });
+    }
+
+    // Verify OTP using emailOtpService
+    const result = await emailOtpService.verifyOTP(normalizedEmail, otp);
+
+    if (result.status !== "approved") {
+      let message = "Invalid OTP";
+      if (result.status === "expired") {
+        message = "OTP has expired. Please request a new OTP.";
+      } else if (result.status === "too_many_attempts") {
+        message = "Too many failed attempts. Please request a new OTP.";
+      }
+      return res.status(400).json({
+        status: 0,
+        message,
+      });
+    }
+
+    // Find and update user in database
+    const user = await User.findByPk(userId);
+    if (!user || user.isDeleted) {
+      return res.status(404).json({
+        status: 0,
+        message: "User not found",
+      });
+    }
+
+    await user.update({
+      email: normalizedEmail,
+      isEmailVerified: true,
+    });
+
+    await emailOtpService.consumeEmailVerification(normalizedEmail);
+
+    return res.status(200).json({
+      status: 1,
+      message: "Email verified and updated successfully",
+      data: {
+        id: user.id,
+        email: user.email,
+        isEmailVerified: user.isEmailVerified,
+      },
+    });
+  } catch (error) {
+    console.error("UpdateEmail Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong while updating email",
+    });
+  }
+};
+
+/**
+ * Update Mobile Number with OTP verification (authenticated)
+ */
+exports.UpdateMobile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { mobile, otp } = req.body;
+
+    if (!mobile || !otp) {
+      return res.status(400).json({
+        status: 0,
+        message: "Mobile number and OTP are required",
+      });
+    }
+
+    // Format phone number to E.164
+    let formattedMobile = mobile.trim();
+    if (!formattedMobile.startsWith("+")) {
+      formattedMobile = "+91" + formattedMobile.replace(/\D/g, "");
+    }
+
+    // Check if mobile is already used by another user
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [
+          { mobile: formattedMobile },
+          { mobile: mobile.trim() }
+        ],
+        id: { [Op.ne]: userId },
+        isDeleted: false,
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        status: 0,
+        message: "Mobile number is already registered with another account",
+      });
+    }
+
+    // Verify OTP using Twilio Verify or fallback
+    const verificationCheck = await twilioConfig.verifyOTP(formattedMobile, otp);
+    const isValid = verificationCheck.status === "approved" || verificationCheck.valid === true;
+
+    if (!isValid) {
+      return res.status(400).json({
+        status: 0,
+        message: "Invalid OTP or verification failed",
+      });
+    }
+
+    // Find and update user in database
+    const user = await User.findByPk(userId);
+    if (!user || user.isDeleted) {
+      return res.status(404).json({
+        status: 0,
+        message: "User not found",
+      });
+    }
+
+    await user.update({
+      mobile: formattedMobile,
+      isPhoneVerified: true,
+    });
+
+    return res.status(200).json({
+      status: 1,
+      message: "Mobile number verified and updated successfully",
+      data: {
+        id: user.id,
+        mobile: user.mobile,
+        isPhoneVerified: user.isPhoneVerified,
+      },
+    });
+  } catch (error) {
+    console.error("UpdateMobile Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong while updating mobile number",
+    });
+  }
+};
+
+
