@@ -20,9 +20,6 @@ const bodyParser = require("body-parser");
 const cron = require('node-cron');
 const reminderService = require('./services/reminder.service');
 
-//await User.sync({ force: true });
-await User.sync({ alter: true });
-
 require("./models");
 
 
@@ -110,12 +107,12 @@ sequelize
   .catch((error) => {
     console.error("❌ Database Connection Failed:", error);
   });
-// sequelize
-//   .sync()
-//   .then(() => {
-//     console.log("✅ Tables Synced");
-//   })
-//   .catch(console.error);
+sequelize
+  .sync()
+  .then(() => {
+    console.log("✅ Tables Synced");
+  })
+  .catch(console.error);
 
 // Schedule reminder checks - run every 5 minutes using setInterval
 setInterval(async () => {
