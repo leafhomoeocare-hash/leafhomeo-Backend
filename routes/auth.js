@@ -23,6 +23,11 @@ router.post('/add-token',authmiddleware,authController.UpdateFcmToken)
 // Phone verification routes
 router.post('/send-phone-otp', authController.SendPhoneOTP);
 router.post('/verify-phone-otp', authController.VerifyPhoneOTP);
+// Email verification routes
+router.post('/send-email-otp', authController.SendEmailOTP);
+router.post('/verify-email-otp', authController.VerifyEmailOTP);
+router.post('/update-email', authmiddleware, authController.UpdateEmail);
+router.post('/update-mobile', authmiddleware, authController.UpdateMobile);
 // Terms and conditions route
 router.get('/terms-conditions', authController.GetTermsConditions);
 module.exports = router;

@@ -9,13 +9,14 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const Sequelize = require("sequelize");
 const Notification = require("../models/Notification");
 const twilioConfig = require("../config/twilio");
+const emailOtpService = require("../services/emailOtp.service");
 
 
 
 
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, mobile, password, otp, termsAccepted, phoneVerified } = req.body;
+    const { name, email, mobile, password, otp, termsAccepted, phoneVerified, emailVerified, isEmailVerified } = req.body;
 
     // Validation
     if (!name || !email || !mobile || !password || termsAccepted === undefined)  {
@@ -73,6 +74,10 @@ exports.register = async (req, res, next) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Check if email was pre-verified in session or passed from frontend
+    const preVerified = await emailOtpService.isEmailVerified(email);
+    const verifiedEmailStatus = Boolean(isEmailVerified || emailVerified || preVerified);
+
     // Create User with formatted mobile number
     const user = await User.create({
       name,
@@ -81,8 +86,14 @@ exports.register = async (req, res, next) => {
       password: hashedPassword,
       role: "patient",
       isPhoneVerified: true,
+      isEmailVerified: verifiedEmailStatus,
       termsAccepted: true,
     });
+
+    // Consume pre-verification token if any
+    if (preVerified) {
+      await emailOtpService.consumeEmailVerification(email);
+    }
 
     // Create Patient Profile
     const patient = await Patient.create({
@@ -101,6 +112,7 @@ exports.register = async (req, res, next) => {
         patientId: patient.id,
         IsCompleteProfile: patient.IsCompleteProfile,
         isPhoneVerified: user.isPhoneVerified,
+        isEmailVerified: user.isEmailVerified,
         termsAccepted: user.termsAccepted,
       },
     });
@@ -1142,13 +1154,30 @@ exports.SendPhoneOTP = async (req, res) => {
       formattedMobile = '+91' + mobile.replace(/\D/g, ''); // Remove non-digits and add +91
     }
 
-    // Check if mobile already exists (check both formatted and original)
+    // Check optional authenticated user
+    let currentUserId = null;
+    if (req.headers.authorization) {
+      try {
+        const authHeader = req.headers.authorization;
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded && decoded.id) {
+          currentUserId = decoded.id;
+        }
+      } catch (e) {
+        // optional auth, proceed if invalid
+      }
+    }
+
+    // Check if mobile already exists for ANOTHER user
     const existingUser = await User.findOne({
       where: {
         [Op.or]: [
           { mobile: formattedMobile },
           { mobile: mobile }
         ],
+        isDeleted: false,
+        ...(currentUserId ? { id: { [Op.ne]: currentUserId } } : {}),
       },
     });
 
@@ -1274,6 +1303,310 @@ exports.GetTermsConditions = async (req, res) => {
     return res.status(500).json({
       status: 0,
       message: "Something went wrong",
+    });
+  }
+};
+
+/**
+ * 1. Send Email OTP (Two API Approach)
+ * Generates OTP, stores in Redis/Memory with expiration & rate limits, sends via Nodemailer
+ * Does NOT return OTP in response body
+ */
+exports.SendEmailOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email is required",
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        status: 0,
+        message: "Invalid email address format",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check optional authenticated user
+    let currentUserId = null;
+    if (req.headers.authorization) {
+      try {
+        const authHeader = req.headers.authorization;
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded && decoded.id) {
+          currentUserId = decoded.id;
+        }
+      } catch (e) {
+        // optional auth, proceed if invalid
+      }
+    }
+
+    // Check if email already registered to ANOTHER user
+    const existingUser = await User.findOne({
+      where: {
+        email: normalizedEmail,
+        isDeleted: false,
+        ...(currentUserId ? { id: { [Op.ne]: currentUserId } } : {}),
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email already registered",
+      });
+    }
+
+    // Send OTP via emailOtpService
+    try {
+      await emailOtpService.sendOTP(normalizedEmail);
+
+      return res.status(200).json({
+        status: 1,
+        message: "OTP sent successfully",
+      });
+    } catch (sendError) {
+      console.error("SendEmailOTP Service Error:", sendError);
+      const statusCode = sendError.statusCode || 500;
+      return res.status(statusCode).json({
+        status: 0,
+        message: sendError.message || "Failed to send OTP email. Please try again.",
+      });
+    }
+  } catch (error) {
+    console.error("SendEmailOTP Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong",
+    });
+  }
+};
+
+/**
+ * 2. Verify Email OTP (Two API Approach)
+ * Verifies submitted OTP against Redis/Memory store
+ * Handles valid, invalid, expired, and brute-force protection
+ */
+exports.VerifyEmailOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email and OTP are required",
+      });
+    }
+
+    const result = await emailOtpService.verifyOTP(email, otp);
+
+    if (result.status === "approved") {
+      return res.status(200).json({
+        status: 1,
+        message: "Email verified successfully",
+      });
+    } else if (result.status === "expired") {
+      return res.status(400).json({
+        status: 0,
+        message: "OTP has expired. Please request a new OTP.",
+      });
+    } else if (result.status === "too_many_attempts") {
+      return res.status(429).json({
+        status: 0,
+        message: "Too many failed attempts. Please request a new OTP.",
+      });
+    } else {
+      // result.status === 'denied'
+      return res.status(400).json({
+        status: 0,
+        message: "Invalid OTP",
+      });
+    }
+  } catch (error) {
+    console.error("VerifyEmailOTP Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong",
+    });
+  }
+};
+
+/**
+ * Update Email with OTP verification (authenticated)
+ */
+exports.UpdateEmail = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email and OTP are required",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({
+        status: 0,
+        message: "Invalid email address format",
+      });
+    }
+
+    // Check if email is already used by another user
+    const existingUser = await User.findOne({
+      where: {
+        email: normalizedEmail,
+        id: { [Op.ne]: userId },
+        isDeleted: false,
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        status: 0,
+        message: "Email is already registered with another account",
+      });
+    }
+
+    // Verify OTP using emailOtpService
+    const result = await emailOtpService.verifyOTP(normalizedEmail, otp);
+
+    if (result.status !== "approved") {
+      let message = "Invalid OTP";
+      if (result.status === "expired") {
+        message = "OTP has expired. Please request a new OTP.";
+      } else if (result.status === "too_many_attempts") {
+        message = "Too many failed attempts. Please request a new OTP.";
+      }
+      return res.status(400).json({
+        status: 0,
+        message,
+      });
+    }
+
+    // Find and update user in database
+    const user = await User.findByPk(userId);
+    if (!user || user.isDeleted) {
+      return res.status(404).json({
+        status: 0,
+        message: "User not found",
+      });
+    }
+
+    await user.update({
+      email: normalizedEmail,
+      isEmailVerified: true,
+    });
+
+    await emailOtpService.consumeEmailVerification(normalizedEmail);
+
+    return res.status(200).json({
+      status: 1,
+      message: "Email verified and updated successfully",
+      data: {
+        id: user.id,
+        email: user.email,
+        isEmailVerified: user.isEmailVerified,
+      },
+    });
+  } catch (error) {
+    console.error("UpdateEmail Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong while updating email",
+    });
+  }
+};
+
+/**
+ * Update Mobile Number with OTP verification (authenticated)
+ */
+exports.UpdateMobile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { mobile, otp } = req.body;
+
+    if (!mobile || !otp) {
+      return res.status(400).json({
+        status: 0,
+        message: "Mobile number and OTP are required",
+      });
+    }
+
+    // Format phone number to E.164
+    let formattedMobile = mobile.trim();
+    if (!formattedMobile.startsWith("+")) {
+      formattedMobile = "+91" + formattedMobile.replace(/\D/g, "");
+    }
+
+    // Check if mobile is already used by another user
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [
+          { mobile: formattedMobile },
+          { mobile: mobile.trim() }
+        ],
+        id: { [Op.ne]: userId },
+        isDeleted: false,
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        status: 0,
+        message: "Mobile number is already registered with another account",
+      });
+    }
+
+    // Verify OTP using Twilio Verify or fallback
+    const verificationCheck = await twilioConfig.verifyOTP(formattedMobile, otp);
+    const isValid = verificationCheck.status === "approved" || verificationCheck.valid === true;
+
+    if (!isValid) {
+      return res.status(400).json({
+        status: 0,
+        message: "Invalid OTP or verification failed",
+      });
+    }
+
+    // Find and update user in database
+    const user = await User.findByPk(userId);
+    if (!user || user.isDeleted) {
+      return res.status(404).json({
+        status: 0,
+        message: "User not found",
+      });
+    }
+
+    await user.update({
+      mobile: formattedMobile,
+      isPhoneVerified: true,
+    });
+
+    return res.status(200).json({
+      status: 1,
+      message: "Mobile number verified and updated successfully",
+      data: {
+        id: user.id,
+        mobile: user.mobile,
+        isPhoneVerified: user.isPhoneVerified,
+      },
+    });
+  } catch (error) {
+    console.error("UpdateMobile Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong while updating mobile number",
     });
   }
 };
