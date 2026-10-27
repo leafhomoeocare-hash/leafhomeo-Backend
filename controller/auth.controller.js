@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { User, Doctor, Patient,Appointment,Payment } = require("../models");
+const { User, Doctor, Patient, Appointment, Payment } = require("../models");
 const { Op } = require("sequelize");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
@@ -19,7 +19,7 @@ exports.register = async (req, res, next) => {
     const { name, email, mobile, password, otp, termsAccepted, phoneVerified, emailVerified, isEmailVerified } = req.body;
 
     // Validation
-    if (!name || !email || !mobile || !password || termsAccepted === undefined)  {
+    if (!name || !email || !mobile || !password || termsAccepted === undefined) {
       return res.status(400).json({
         status: 0,
         message: "All fields are required including terms acceptance",
@@ -138,8 +138,8 @@ exports.register = async (req, res, next) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log(req.body,"boDY");
-    
+    console.log(req.body, "boDY");
+
 
     if (!email || !password) {
       return res.status(400).json({
@@ -162,7 +162,7 @@ exports.login = async (req, res) => {
     }
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       },
@@ -294,6 +294,8 @@ exports.GetUser = async (req, res) => {
       mobile: userData.mobile,
       role: userData.role,
       image: userData.image,
+      isEmailVerified: userData.isEmailVerified,
+      isPhoneVerified: userData.isPhoneVerified,
     };
 
     // Only include relevant profile based on user role
@@ -326,54 +328,54 @@ exports.GetUser = async (req, res) => {
   }
 };
 exports.ChangePassword = async (req, res) => {
-    try {
-        const userId = req.user?.id;
-        const { oldPassword, newPassword } = req.body;
+  try {
+    const userId = req.user?.id;
+    const { oldPassword, newPassword } = req.body;
 
-        console.log("BODY:", req.body);
-        
-        // 1. Validation check
-        if (!oldPassword || !newPassword) {
-            return res.status(400).json({
-                status: 0,
-                message: "Old password and new password are required",
-            });
-        }
+    console.log("BODY:", req.body);
 
-        // 2. User existence check
-        const user = await User.findByPk(userId);
-        if (!user) {
-            return res.status(404).json({
-                status: 0,
-                message: "User not found",
-            });
-        }
-
-        // 3. Password match check
-        const isMatch = await bcrypt.compare(oldPassword, user.password);
-        if (!isMatch) {
-            return res.status(400).json({
-                status: 0,
-                message: "Old password is incorrect",
-            });
-        }
-
-        // 4. Hash and update
-        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-        await user.update({ password: hashedNewPassword });
-
-        return res.status(200).json({
-            status: 1,
-            message: "Password changed successfully",
-        });
-        
-    } catch (error) {
-        console.error("ChangePassword Error:", error); 
-        return res.status(500).json({   
-            status: 0,
-            message: "Something went wrong",
-        });
+    // 1. Validation check
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        status: 0,
+        message: "Old password and new password are required",
+      });
     }
+
+    // 2. User existence check
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        status: 0,
+        message: "User not found",
+      });
+    }
+
+    // 3. Password match check
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({
+        status: 0,
+        message: "Old password is incorrect",
+      });
+    }
+
+    // 4. Hash and update
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await user.update({ password: hashedNewPassword });
+
+    return res.status(200).json({
+      status: 1,
+      message: "Password changed successfully",
+    });
+
+  } catch (error) {
+    console.error("ChangePassword Error:", error);
+    return res.status(500).json({
+      status: 0,
+      message: "Something went wrong",
+    });
+  }
 };
 
 exports.UpdateProfile = async (req, res) => {
@@ -398,20 +400,20 @@ exports.UpdateProfile = async (req, res) => {
     } = req.body;
     const image = req.file ? req.file.path : null;
 
-    if (!name || !email || !mobile) {
+    if (!name) {
       await transaction.rollback();
       return res.status(400).json({
         status: 0,
-        message: "Name, email and mobile are required",
+        message: "Name is required",
       });
     }
 
-    const user = await User.findByPk(userId, { 
+    const user = await User.findByPk(userId, {
       where: { isDeleted: false },
-      transaction 
+      transaction
     });
     const patient = await Patient.findOne({
-      where: { 
+      where: {
         userId,
         isDeleted: false,
       },
@@ -426,34 +428,32 @@ exports.UpdateProfile = async (req, res) => {
       });
     }
 
-    // Check if email or mobile already exists for another user
-    if (email || mobile) {
-      const existingUser = await User.findOne({
-        where: {
-          [Op.or]: [
-            ...(email ? [{ email }] : []),
-            ...(mobile ? [{ mobile }] : []),
-          ],
-          id: { [Op.ne]: userId },
-        },
-        transaction,
+    // Disallow modifying email or mobile directly through update-profile
+    if (email && email.trim().toLowerCase() !== user.email.toLowerCase()) {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 0,
+        message: "Email cannot be changed directly. Please use the Change Email verification option.",
       });
-
-      if (existingUser) {
-        await transaction.rollback();
-        return res.status(400).json({
-          status: 0,
-          message: existingUser.email === email ? "Email already exists" : "Mobile already exists",
-        });
-      }
     }
 
-    // Update User
+    if (
+      mobile &&
+      mobile.trim() !== user.mobile &&
+      mobile.trim() !== user.mobile.replace(/^\+91/, "") &&
+      "+91" + mobile.replace(/\D/g, "") !== user.mobile
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 0,
+        message: "Mobile number cannot be changed directly. Please use the Change Mobile Number verification option.",
+      });
+    }
+
+    // Update User (preserve verified email and mobile)
     await user.update(
       {
         name,
-        email,
-        mobile,
         ...(image && { image }),
       },
       { transaction }
@@ -493,6 +493,8 @@ exports.UpdateProfile = async (req, res) => {
         email: user.email,
         mobile: user.mobile,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        isPhoneVerified: user.isPhoneVerified,
         IsCompleteProfile: patient?.IsCompleteProfile || false,
       },
     });
@@ -510,8 +512,8 @@ exports.CompleteProfile = async (req, res) => {
 
   try {
     const userId = req.user.id;
-    console.log(userId,"userId");
-const image = req.file ? req.file.path : null;
+    console.log(userId, "userId");
+    const image = req.file ? req.file.path : null;
     const {
       name,
       gender,
@@ -526,14 +528,14 @@ const image = req.file ? req.file.path : null;
       country,
     } = req.body;
 
-    const user = await User.findByPk(userId, { 
+    const user = await User.findByPk(userId, {
       where: { isDeleted: false },
-      transaction 
+      transaction
     });
     console.log("User found:", !!user);
 
     let patient = await Patient.findOne({
-      where: { 
+      where: {
         userId,
         isDeleted: false,
       },
@@ -608,7 +610,7 @@ exports.ForgetPassword = async (req, res) => {
     const { email } = req.body;
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       }
@@ -639,7 +641,7 @@ exports.ForgetPassword = async (req, res) => {
         pass: process.env.EMAIL_PASS
       }
     });
-    console.log(transporter,"EMAIL PASS")
+    console.log(transporter, "EMAIL PASS")
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -688,7 +690,7 @@ exports.VerifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       }
@@ -748,7 +750,7 @@ exports.ResetPassword = async (req, res) => {
     }
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       },
@@ -810,7 +812,7 @@ exports.SetupPassword = async (req, res) => {
     }
 
     const user = await User.findOne({
-      where: { 
+      where: {
         email,
         isDeleted: false,
       },
@@ -1001,7 +1003,7 @@ exports.MarkAllNotificationsAsRead = async (req, res) => {
   }
 };
 
-    exports.TruncateNotifications = async (req, res) => {
+exports.TruncateNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -1047,7 +1049,7 @@ exports.DeleteUser = async (req, res) => {
     // Doctor
     if (user.role === "doctor") {
       const doctor = await Doctor.findOne({
-        where: { 
+        where: {
           userId,
           isDeleted: false,
         },
@@ -1065,7 +1067,7 @@ exports.DeleteUser = async (req, res) => {
     // Patient
     if (user.role === "patient") {
       const patient = await Patient.findOne({
-        where: { 
+        where: {
           userId,
           isDeleted: false,
         },
@@ -1238,10 +1240,10 @@ exports.VerifyPhoneOTP = async (req, res) => {
     // Verify OTP using Twilio Verify or fallback
     try {
       const verificationCheck = await twilioConfig.verifyOTP(formattedMobile, otp);
-      
+
       // Handle both Twilio response and fallback response
       const isValid = verificationCheck.status === 'approved' || verificationCheck.valid === true;
-      
+
       if (isValid) {
         return res.status(200).json({
           status: 1,

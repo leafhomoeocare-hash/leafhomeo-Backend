@@ -34,7 +34,7 @@ var paymentRouter = require('./routes/payment');
 var chatRouter = require('./routes/chat');
 var couponRouter = require('./routes/coupon');
 var shippingRouter = require('./routes/shipping');
- const cors = require("cors");
+const cors = require("cors");
 
 var app = express();
 
@@ -75,7 +75,7 @@ app.use("/api/v1/admin", adminRouter);// catch 404 and forward to error handler
 app.use("/api/v1/patient", PatientRouter);
 app.use("/api/v1/appointment", appointmentRouter);
 app.use("/api/v1/doctor", doctorRouter);
-app.use('/api/v1/payment',paymentRouter);
+app.use('/api/v1/payment', paymentRouter);
 app.use('/api/v1/chat', chatRouter);
 app.use('/api/v1', couponRouter);
 app.use('/api/v1/shipping', shippingRouter);
@@ -85,16 +85,16 @@ app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     console.error('=== MULTER ERROR ===');
     console.error('MulterError:', err);
-    return res.status(400).json({ 
-      status: 0, 
-      message: 'File upload error', 
-      error: err.message 
+    return res.status(400).json({
+      status: 0,
+      message: 'File upload error',
+      error: err.message
     });
   }
   next(err);
 });
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
@@ -107,12 +107,12 @@ sequelize
   .catch((error) => {
     console.error("❌ Database Connection Failed:", error);
   });
-// sequelize
-//   .sync()
-//   .then(() => {
-//     console.log("✅ Tables Synced");
-//   })
-//   .catch(console.error);
+sequelize
+  .sync()
+  .then(() => {
+    console.log("✅ Tables Synced");
+  })
+  .catch(console.error);
 
 // Schedule reminder checks - run every 5 minutes using setInterval
 setInterval(async () => {
@@ -120,7 +120,7 @@ setInterval(async () => {
   await reminderService.runReminderChecks();
 }, 5 * 60 * 1000); // Every 5 minutes
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
