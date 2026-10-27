@@ -91,7 +91,7 @@ exports.AvailabilitySlots = async (req,res,next )=>{
     console.log("Booked appointments found:", appointments.length);
 
     const bookedSlots = appointments.map((a) => {
-      const d = new Date(a.appointmentDateTime);
+      const d = new Date(a.appointmentDateTime + "+05:30");
       return d.toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
@@ -288,7 +288,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       // Check if any existing appointment has the same slot time
       for (const existing of existingAppointments) {
-        const existingSlotTime = new Date(existing.appointmentDateTime).toLocaleTimeString("en-GB", {
+        const existingSlotTime = new Date(existing.appointmentDateTime + "+05:30").toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
           timeZone: "Asia/Kolkata"
@@ -450,7 +450,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       // Check if any existing appointment has the same slot time
       for (const existing of existingAppointments) {
-        const existingSlotTime = new Date(existing.appointmentDateTime).toLocaleTimeString("en-GB", {
+        const existingSlotTime = new Date(existing.appointmentDateTime + "+05:30").toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
           timeZone: "Asia/Kolkata"
