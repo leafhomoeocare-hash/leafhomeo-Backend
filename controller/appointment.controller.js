@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { User, Doctor, Patient,Appointment,Payment, Availability,Review, Consultation} = require("../models");
+const { User, Doctor, Patient,Appointment,Payment, Availability,Review, Consultation, Notification} = require("../models");
 const { Op } = require("sequelize");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
@@ -9,7 +9,6 @@ const Sequelize = require("sequelize");
 const twilio = require('twilio');
 const { AccessToken } = twilio.jwt;
 const { VideoGrant } = AccessToken;
-const Notification = require("../models/Notification");
 const shiprocketService = require("../services/shiprocket.service");
 const sequelize = require("../config/database");
 
