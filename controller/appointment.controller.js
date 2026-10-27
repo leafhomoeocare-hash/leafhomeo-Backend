@@ -91,7 +91,7 @@ exports.AvailabilitySlots = async (req,res,next )=>{
     console.log("Booked appointments found:", appointments.length);
 
     const bookedSlots = appointments.map((a) => {
-      const d = new Date(a.appointmentDateTime);
+      const d = new Date(a.appointmentDateTime + " GMT+05:30");
       return d.toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
@@ -215,7 +215,8 @@ exports.AppointmentBooking = async (req, res, next) => {
         });
       }
 
-      const appointmentDate = new Date(appointmentDateTime);
+      // Parse date as IST time (incoming format is "YYYY-MM-DD HH:mm:ss" in IST)
+      const appointmentDate = new Date(appointmentDateTime + " GMT+05:30");
 
       // Use local day of week (not UTC) to match doctor's availability configuration
       const dayOfWeek = appointmentDate
@@ -264,12 +265,10 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       console.log("Checking for existing appointments on same slot...");
 
-      // Use local date range for checking existing appointments (IST timezone)
-      const localDate = new Date(appointmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-      const startOfDay = new Date(localDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(localDate);
-      endOfDay.setHours(23, 59, 59, 999);
+      // Use the date string directly since it's already in IST format
+      const dateStr = appointmentDateTime.split(' ')[0];
+      const startOfDay = `${dateStr} 00:00:00`;
+      const endOfDay = `${dateStr} 23:59:59`;
 
       console.log("Checking appointments between:", startOfDay, "and", endOfDay);
 
@@ -288,7 +287,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       // Check if any existing appointment has the same slot time
       for (const existing of existingAppointments) {
-        const existingSlotTime = new Date(existing.appointmentDateTime).toLocaleTimeString("en-GB", {
+        const existingSlotTime = new Date(existing.appointmentDateTime + " GMT+05:30").toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
           timeZone: "Asia/Kolkata"

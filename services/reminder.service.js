@@ -102,7 +102,7 @@ const sendAppointmentReminders = async () => {
             <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
               <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Reminder</h2>
               <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patient.name},</p>
-              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment with <strong style="color: #64a281;">Dr. ${doctor.name}</strong> is scheduled for tomorrow at <strong>${new Date(appointment.appointmentDateTime).toLocaleTimeString()}</strong>.</p>
+              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment with <strong style="color: #64a281;">Dr. ${doctor.name}</strong> is scheduled for tomorrow at <strong>${new Date(appointment.appointmentDateTime + " GMT+05:30").toLocaleTimeString()}</strong>.</p>
               <p style="color: #374151; line-height: 1.6; font-size: 15px;">Please make sure to complete your payment before the consultation.</p>
               <div style="background: linear-gradient(135deg, #64a281 0%, #528f6e 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
                 <p style="margin: 0; font-weight: bold; font-size: 16px;">🌿 Natural Healing, Personalized Care</p>
@@ -118,7 +118,7 @@ const sendAppointmentReminders = async () => {
         userId: patient.id,
         senderId: doctor.id, // Doctor as sender
         title: 'Appointment Tomorrow',
-        message: `Your appointment with Dr. ${doctor.name} is scheduled for tomorrow at ${new Date(appointment.appointmentDateTime).toLocaleTimeString()}`,
+        message: `Your appointment with Dr. ${doctor.name} is scheduled for tomorrow at ${new Date(appointment.appointmentDateTime + " GMT+05:30").toLocaleTimeString()}`,
         type: 'appointment_reminder',
         referenceId: appointment.id,
         isRead: false
@@ -345,7 +345,7 @@ const cancelPendingAppointments = async () => {
                 <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
                   <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Cancelled</h2>
                   <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patientUser.name},</p>
-                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${new Date(appointment.appointmentDateTime).toLocaleString()}</strong> has been automatically cancelled.</p>
+                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${new Date(appointment.appointmentDateTime + " GMT+05:30").toLocaleString()}</strong> has been automatically cancelled.</p>
                   <p style="color: #374151; line-height: 1.6; font-size: 15px;">Reason: ${reasonText}.</p>
                   <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
                     <p style="margin: 0; font-weight: bold; font-size: 16px;">⏰ Time Expired</p>
