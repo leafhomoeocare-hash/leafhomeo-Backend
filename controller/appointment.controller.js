@@ -91,7 +91,7 @@ exports.AvailabilitySlots = async (req,res,next )=>{
     console.log("Booked appointments found:", appointments.length);
 
     const bookedSlots = appointments.map((a) => {
-      const d = new Date(a.appointmentDateTime + " GMT+05:30");
+      const d = new Date(a.appointmentDateTime);
       return d.toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
@@ -216,7 +216,7 @@ exports.AppointmentBooking = async (req, res, next) => {
       }
 
       // Parse date as IST time (incoming format is "YYYY-MM-DD HH:mm:ss" in IST)
-      const appointmentDate = new Date(appointmentDateTime + " GMT+05:30");
+      const appointmentDate = new Date(appointmentDateTime);
 
       // Use local day of week (not UTC) to match doctor's availability configuration
       const dayOfWeek = appointmentDate
@@ -287,7 +287,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       // Check if any existing appointment has the same slot time
       for (const existing of existingAppointments) {
-        const existingSlotTime = new Date(existing.appointmentDateTime + " GMT+05:30").toLocaleTimeString("en-GB", {
+        const existingSlotTime = new Date(existing.appointmentDateTime).toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
           timeZone: "Asia/Kolkata"
@@ -311,7 +311,7 @@ exports.AppointmentBooking = async (req, res, next) => {
         patientId,
         doctorId: requestType === "specific_doctor" ? doctorId : null,
         requestType,
-        appointmentDateTime: appointmentDateTime + " +05:30",
+        appointmentDateTime: appointmentDateTime,
         reason,
       },
       { transaction }
@@ -377,7 +377,7 @@ exports.AppointmentBooking = async (req, res, next) => {
       }
 
       // Parse date as IST time (incoming format is "YYYY-MM-DD HH:mm:ss" in IST)
-      const appointmentDate = new Date(appointmentDateTime + " GMT+05:30");
+      const appointmentDate = new Date(appointmentDateTime);
 
       // Use local day of week (not UTC) to match doctor's availability configuration
       const dayOfWeek = appointmentDate
@@ -448,7 +448,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       // Check if any existing appointment has the same slot time
       for (const existing of existingAppointments) {
-        const existingSlotTime = new Date(existing.appointmentDateTime + " GMT+05:30").toLocaleTimeString("en-GB", {
+        const existingSlotTime = new Date(existing.appointmentDateTime).toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
           timeZone: "Asia/Kolkata"
