@@ -216,7 +216,8 @@ exports.AppointmentBooking = async (req, res, next) => {
       }
 
       // Parse date as IST time (incoming format is "YYYY-MM-DD HH:mm:ss" in IST)
-      const appointmentDate = new Date(appointmentDateTime);
+      // Force IST interpretation since frontend sends IST time
+      const appointmentDate = new Date(appointmentDateTime + "+05:30");
 
       // Use local day of week (not UTC) to match doctor's availability configuration
       const dayOfWeek = appointmentDate
@@ -377,7 +378,8 @@ exports.AppointmentBooking = async (req, res, next) => {
       }
 
       // Parse date as IST time (incoming format is "YYYY-MM-DD HH:mm:ss" in IST)
-      const appointmentDate = new Date(appointmentDateTime);
+      // Force IST interpretation since frontend sends IST time
+      const appointmentDate = new Date(appointmentDateTime + "+05:30");
 
       // Use local day of week (not UTC) to match doctor's availability configuration
       const dayOfWeek = appointmentDate
