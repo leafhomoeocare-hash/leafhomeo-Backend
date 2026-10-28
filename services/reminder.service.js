@@ -242,8 +242,8 @@ const sendPaymentReminders = async () => {
 };
 
 /**
- * Cancel pending/accepted/paid appointments immediately when time has passed
- * - Cancels appointments with status 'pending', 'payment_pending', 'accepted', or 'paid' if appointment time has passed
+ * Cancel pending/accepted/paid appointments after 30 minutes of appointment time
+ * - Cancels appointments with status 'pending', 'payment_pending', 'accepted', or 'paid' if 30 minutes have passed since appointment time
  * - Only 'completed' appointments are not cancelled
  */
 const cancelPendingAppointments = async () => {
@@ -252,14 +252,14 @@ const cancelPendingAppointments = async () => {
 
     const now = new Date();
 
-    // Get pending, payment_pending, accepted, and paid appointments that are past their time
+    // Get pending, payment_pending, accepted, and paid appointments that are 30 minutes past their time
     const appointments = await Appointment.findAll({
       where: {
         status: {
           [Op.in]: ['pending', 'payment_pending', 'accepted', 'paid']
         },
         appointmentDateTime: {
-          [Op.lt]: now
+          [Op.lt]: new Date(now.getTime() - 30 * 60 * 1000) // 30 minutes ago
         }
       },
       include: [
@@ -295,13 +295,13 @@ const cancelPendingAppointments = async () => {
       if (appointment.patient) {
         let message;
         if (appointment.status === 'payment_pending') {
-          message = 'Your appointment has been automatically cancelled as the scheduled time has passed and payment was not completed.';
+          message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time and payment was not completed.';
         } else if (appointment.status === 'accepted') {
-          message = 'Your appointment has been automatically cancelled as the scheduled time has passed and payment was not completed.';
+          message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time and payment was not completed.';
         } else if (appointment.status === 'paid') {
-          message = 'Your appointment has been automatically cancelled as the scheduled time has passed and the consultation was not completed.';
+          message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time and the consultation was not completed.';
         } else {
-          message = 'Your appointment has been automatically cancelled as the scheduled time has passed and it was not accepted.';
+          message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time and it was not accepted.';
         }
 
         await Notification.create({
@@ -319,13 +319,13 @@ const cancelPendingAppointments = async () => {
         if (patientUser) {
           let reasonText;
           if (appointment.status === 'payment_pending') {
-            reasonText = 'Payment was not completed before the scheduled time';
+            reasonText = 'Payment was not completed within 30 minutes of the scheduled time';
           } else if (appointment.status === 'accepted') {
-            reasonText = 'Payment was not completed before the scheduled time';
+            reasonText = 'Payment was not completed within 30 minutes of the scheduled time';
           } else if (appointment.status === 'paid') {
-            reasonText = 'The consultation was not completed before the scheduled time';
+            reasonText = 'The consultation was not completed within 30 minutes of the scheduled time';
           } else {
-            reasonText = 'Appointment was not accepted before the scheduled time';
+            reasonText = 'Appointment was not accepted within 30 minutes of the scheduled time';
           }
 
           await sendEmail({
@@ -344,7 +344,7 @@ const cancelPendingAppointments = async () => {
                   <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${new Date(appointment.appointmentDateTime + " GMT+05:30").toLocaleString()}</strong> has been automatically cancelled.</p>
                   <p style="color: #374151; line-height: 1.6; font-size: 15px;">Reason: ${reasonText}.</p>
                   <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
-                    <p style="margin: 0; font-weight: bold; font-size: 16px;">⏰ Time Expired</p>
+                    <p style="margin: 0; font-weight: bold; font-size: 16px;">⏰ 30-Minute Window Expired</p>
                   </div>
                   <p style="color: #6b7280; margin-bottom: 0; font-size: 14px;">Please book a new appointment at your convenience.<br><strong style="color: #145656;">Leaf Homeo Team</strong></p>
                 </div>
