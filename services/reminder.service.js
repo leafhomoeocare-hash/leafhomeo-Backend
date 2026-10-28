@@ -242,21 +242,21 @@ const sendPaymentReminders = async () => {
 };
 
 /**
- * Cancel pending/accepted appointments immediately when time has passed
- * - Cancels appointments with status 'pending', 'payment_pending', or 'accepted' if appointment time has passed
- * - For 'accepted' status, only cancel if payment is not completed
+ * Cancel pending/accepted/paid appointments immediately when time has passed
+ * - Cancels appointments with status 'pending', 'payment_pending', 'accepted', or 'paid' if appointment time has passed
+ * - Only 'completed' appointments are not cancelled
  */
 const cancelPendingAppointments = async () => {
   try {
-    console.log('Checking pending/accepted appointments for cancellation...');
+    console.log('Checking pending/accepted/paid appointments for cancellation...');
 
     const now = new Date();
 
-    // Get pending, payment_pending, and accepted appointments that are past their time
+    // Get pending, payment_pending, accepted, and paid appointments that are past their time
     const appointments = await Appointment.findAll({
       where: {
         status: {
-          [Op.in]: ['pending', 'payment_pending', 'accepted']
+          [Op.in]: ['pending', 'payment_pending', 'accepted', 'paid']
         },
         appointmentDateTime: {
           [Op.lt]: now
@@ -276,20 +276,12 @@ const cancelPendingAppointments = async () => {
       ]
     });
 
-    console.log(`Found ${appointments.length} appointments past their time with pending/accepted status`);
+    console.log(`Found ${appointments.length} appointments past their time with pending/accepted/paid status`);
 
     for (const appointment of appointments) {
-      // For accepted appointments, check if payment is completed
-      if (appointment.status === 'accepted') {
-        const hasPaidPayment = appointment.payment && appointment.payment.status === 'paid';
-        if (hasPaidPayment) {
-          console.log(`Skipping appointment ${appointment.id} - Payment already completed`);
-          continue; // Don't cancel if payment is done
-        }
-      }
-
       const cancellationReason = appointment.status === 'payment_pending' ? 'timeout_paid' :
-                                 appointment.status === 'accepted' ? 'timeout_pending' : 'timeout_pending';
+                                 appointment.status === 'accepted' ? 'timeout_pending' :
+                                 appointment.status === 'paid' ? 'timeout_completed' : 'timeout_pending';
 
       await Appointment.update(
         {
@@ -306,6 +298,8 @@ const cancelPendingAppointments = async () => {
           message = 'Your appointment has been automatically cancelled as the scheduled time has passed and payment was not completed.';
         } else if (appointment.status === 'accepted') {
           message = 'Your appointment has been automatically cancelled as the scheduled time has passed and payment was not completed.';
+        } else if (appointment.status === 'paid') {
+          message = 'Your appointment has been automatically cancelled as the scheduled time has passed and the consultation was not completed.';
         } else {
           message = 'Your appointment has been automatically cancelled as the scheduled time has passed and it was not accepted.';
         }
@@ -328,6 +322,8 @@ const cancelPendingAppointments = async () => {
             reasonText = 'Payment was not completed before the scheduled time';
           } else if (appointment.status === 'accepted') {
             reasonText = 'Payment was not completed before the scheduled time';
+          } else if (appointment.status === 'paid') {
+            reasonText = 'The consultation was not completed before the scheduled time';
           } else {
             reasonText = 'Appointment was not accepted before the scheduled time';
           }
