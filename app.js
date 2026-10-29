@@ -107,12 +107,14 @@ sequelize
   .catch((error) => {
     console.error("❌ Database Connection Failed:", error);
   });
-sequelize
-  .sync()
-  .then(() => {
-    console.log("✅ Tables Synced");
-  })
-  .catch(console.error);
+// sequelize.sync() removed for production - tables already exist
+// Uncomment only for development/migrations when schema changes are needed
+// sequelize
+//   .sync()
+//   .then(() => {
+//     console.log("✅ Tables Synced");
+//   })
+//   .catch(console.error);
 
 // Schedule reminder checks - run every 5 minutes using setInterval
 setInterval(async () => {
