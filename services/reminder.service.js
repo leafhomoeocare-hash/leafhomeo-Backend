@@ -279,30 +279,16 @@ const cancelPendingAppointments = async () => {
     console.log(`Found ${appointments.length} appointments past their time with pending/accepted/paid status`);
 
     for (const appointment of appointments) {
-      const cancellationReason = appointment.status === 'payment_pending' ? 'timeout_paid' :
-                                 appointment.status === 'accepted' ? 'timeout_pending' :
-                                 appointment.status === 'paid' ? 'timeout_completed' : 'timeout_pending';
-
       await Appointment.update(
         {
-          status: 'cancelled',
-          cancellationReason: cancellationReason
+          status: 'cancelled'
         },
         { where: { id: appointment.id } }
       );
 
       // Send notification to patient
       if (appointment.patient) {
-        let message;
-        if (appointment.status === 'payment_pending') {
-          message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time and payment was not completed.';
-        } else if (appointment.status === 'accepted') {
-          message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time and payment was not completed.';
-        } else if (appointment.status === 'paid') {
-          message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time and the consultation was not completed.';
-        } else {
-          message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time and it was not accepted.';
-        }
+        const message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time.';
 
         await Notification.create({
           userId: appointment.patient.userId,
@@ -317,17 +303,6 @@ const cancelPendingAppointments = async () => {
         // Get patient user details for email
         const patientUser = await User.findByPk(appointment.patient.userId);
         if (patientUser) {
-          let reasonText;
-          if (appointment.status === 'payment_pending') {
-            reasonText = 'Payment was not completed within 30 minutes of the scheduled time';
-          } else if (appointment.status === 'accepted') {
-            reasonText = 'Payment was not completed within 30 minutes of the scheduled time';
-          } else if (appointment.status === 'paid') {
-            reasonText = 'The consultation was not completed within 30 minutes of the scheduled time';
-          } else {
-            reasonText = 'Appointment was not accepted within 30 minutes of the scheduled time';
-          }
-
           await sendEmail({
             to: patientUser.email,
             subject: 'Appointment Cancelled - Leaf Homeo',
@@ -341,8 +316,7 @@ const cancelPendingAppointments = async () => {
                 <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
                   <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Cancelled</h2>
                   <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patientUser.name},</p>
-                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${new Date(appointment.appointmentDateTime + " GMT+05:30").toLocaleString()}</strong> has been automatically cancelled.</p>
-                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Reason: ${reasonText}.</p>
+                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${new Date(appointment.appointmentDateTime + " GMT+05:30").toLocaleString()}</strong> has been automatically cancelled as 30 minutes have passed since the scheduled time.</p>
                   <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
                     <p style="margin: 0; font-weight: bold; font-size: 16px;">⏰ 30-Minute Window Expired</p>
                   </div>
