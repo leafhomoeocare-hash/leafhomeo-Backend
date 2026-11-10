@@ -102,7 +102,7 @@ const sendAppointmentReminders = async () => {
             <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
               <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Reminder</h2>
               <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patient.name},</p>
-              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment with <strong style="color: #64a281;">Dr. ${doctor.name}</strong> is scheduled for tomorrow at <strong>${new Date(appointment.appointmentDateTime + " GMT+05:30").toLocaleTimeString()}</strong>.</p>
+              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment with <strong style="color: #64a281;">Dr. ${doctor.name}</strong> is scheduled for tomorrow at <strong>${new Date(appointment.appointmentDateTime).toLocaleTimeString()}</strong>.</p>
               <p style="color: #374151; line-height: 1.6; font-size: 15px;">Please make sure to complete your payment before the consultation.</p>
               <div style="background: linear-gradient(135deg, #64a281 0%, #528f6e 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
                 <p style="margin: 0; font-weight: bold; font-size: 16px;">🌿 Natural Healing, Personalized Care</p>
@@ -118,7 +118,7 @@ const sendAppointmentReminders = async () => {
         userId: patient.id,
         senderId: doctor.id, // Doctor as sender
         title: 'Appointment Tomorrow',
-        message: `Your appointment with Dr. ${doctor.name} is scheduled for tomorrow at ${new Date(appointment.appointmentDateTime + " GMT+05:30").toLocaleTimeString()}`,
+        message: `Your appointment with Dr. ${doctor.name} is scheduled for tomorrow at ${new Date(appointment.appointmentDateTime).toLocaleTimeString()}`,
         type: 'appointment_reminder',
         referenceId: appointment.id,
         isRead: false
@@ -290,15 +290,16 @@ const cancelPendingAppointments = async () => {
       if (appointment.patient) {
         const message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time.';
 
-        await Notification.create({
-          userId: appointment.patient.userId,
-          senderId: null,
-          title: 'Appointment Cancelled',
-          message: message,
-          type: 'appointment',
-          referenceId: appointment.id,
-          isRead: false
-        });
+        // Skip notification creation (requires DB migration for senderId nullable)
+        // await Notification.create({
+        //   userId: appointment.patient.userId,
+        //   senderId: null,
+        //   title: 'Appointment Cancelled',
+        //   message: message,
+        //   type: 'appointment',
+        //   referenceId: appointment.id,
+        //   isRead: false
+        // });
 
         // Get patient user details for email
         const patientUser = await User.findByPk(appointment.patient.userId);
@@ -316,7 +317,7 @@ const cancelPendingAppointments = async () => {
                 <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
                   <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Cancelled</h2>
                   <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patientUser.name},</p>
-                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${new Date(appointment.appointmentDateTime + " GMT+05:30").toLocaleString()}</strong> has been automatically cancelled as 30 minutes have passed since the scheduled time.</p>
+                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${new Date(appointment.appointmentDateTime).toLocaleString()}</strong> has been automatically cancelled as 30 minutes have passed since the scheduled time.</p>
                   <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
                     <p style="margin: 0; font-weight: bold; font-size: 16px;">⏰ 30-Minute Window Expired</p>
                   </div>

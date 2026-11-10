@@ -90,7 +90,7 @@ exports.AvailabilitySlots = async (req,res,next )=>{
     console.log("Booked appointments found:", appointments.length);
 
     const bookedSlots = appointments.map((a) => {
-      const d = new Date(a.appointmentDateTime + "+05:30");
+      const d = new Date(a.appointmentDateTime);
       return d.toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
@@ -212,8 +212,8 @@ exports.AppointmentBooking = async (req, res, next) => {
       }
 
       // Parse date as IST time (incoming format is "YYYY-MM-DD HH:mm:ss" in IST)
-      // Force IST interpretation since frontend sends IST time
-      const appointmentDate = new Date(appointmentDateTime + "+05:30");
+      // Database now stores IST directly without timezone conversion
+      const appointmentDate = new Date(appointmentDateTime);
 
       // Use local day of week (not UTC) to match doctor's availability configuration
       const dayOfWeek = appointmentDate
@@ -284,7 +284,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       // Check if any existing appointment has the same slot time
       for (const existing of existingAppointments) {
-        const existingSlotTime = new Date(existing.appointmentDateTime + "+05:30").toLocaleTimeString("en-GB", {
+        const existingSlotTime = new Date(existing.appointmentDateTime).toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
           timeZone: "Asia/Kolkata"
@@ -597,6 +597,12 @@ exports.myAppointments = async (req, res) => {
           as: "payment",
           attributes: ["status", "amount"],
           required: false
+        },
+        {
+          model: Review,
+          as: "review",
+          attributes: ["id"],
+          required: false
         }
       ],
 
@@ -625,6 +631,7 @@ exports.myAppointments = async (req, res) => {
       paymentAmount: item.payment?.amount || null,
       shippingStatus: item.shippingStatus || null,
       trackerId: item.trackerId || null,
+      hasReviewed: !!item.review,
       trackingUrl: item.trackingUrl || null,
       courierName: item.courierName || null
     }));
@@ -896,6 +903,8 @@ exports.EndVideoCall = async (req, res) => {
       appointment.patientEndedCall = true;
     } else if (isDoctor) {
       appointment.doctorEndedCall = true;
+      // If doctor ends the call, force patient to end as well
+      appointment.patientEndedCall = true;
     }
 
     // Only complete appointment if both parties have ended the call
@@ -984,6 +993,13 @@ exports.AppointmentDetails = async (req, res) => {
       return res.status(404).json({ status: 0, message: "Appointment not found" });
     }
 
+    // Check if review already exists for this appointment
+    const existingReview = await Review.findOne({
+      where: { appointmentId: appointment.id }
+    });
+
+    console.log("Existing review for appointment", appointment.id, ":", existingReview);
+
     const doctorData = appointment.doctor
       ? {
           id: appointment.doctor.id,
@@ -1008,7 +1024,8 @@ exports.AppointmentDetails = async (req, res) => {
       shippingStatus: appointment.shippingStatus,
       trackerId: appointment.trackerId,
       trackingUrl: appointment.trackingUrl,
-      courierName: appointment.courierName
+      courierName: appointment.courierName,
+      hasReviewed: !!existingReview
 
     };
 

@@ -78,7 +78,7 @@ app.use("/api/v1/doctor", doctorRouter);
 app.use('/api/v1/payment', paymentRouter);
 app.use('/api/v1/chat', chatRouter);
 app.use('/api/v1', couponRouter);
-app.use('/api/v1/shipping', shippingRouter);
+app.use('/api/v1/shipment', shippingRouter);
 
 // Multer error handler
 app.use((err, req, res, next) => {
