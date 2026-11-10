@@ -13,7 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 exports.GetAppointments = async (req, res, next) => {
   try {
     // 1. Fixing page variable query bug (req.body.age -> req.body.page)
-    const page = parseInt(req.body.page) || 1; 
+    const page = parseInt(req.body.page) || 1;
     const limit = parseInt(req.body.limit) || 10;
     const search = req.body.search ? req.body.search.trim() : "";
     const offset = (page - 1) * limit;
@@ -62,6 +62,7 @@ exports.GetAppointments = async (req, res, next) => {
               { "$patient.user.name$": { [Op.iLike]: `%${search}%` } },
               { "$patient.user.mobile$": { [Op.iLike]: `%${search}%` } },
               { "$doctor.user.name$": { [Op.iLike]: `%${search}%` } },
+              { appointmentId: { [Op.iLike]: `%${search}%` } },
             ],
           }
         : undefined,

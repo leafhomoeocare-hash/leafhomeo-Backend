@@ -48,9 +48,16 @@ app.set('view engine', 'jade');
 app.use(cors());
 app.use(logger('dev'));
 
+// Shiprocket Webhook Middleware
+app.use("/api/v1/order/webhook", (req, res, next) => {
+  console.log("Shiprocket Webhook Request Received");
+  next();
+});
 
-
-
+app.use(
+  "/api/v1/order/webhook",
+  bodyParser.raw({ type: "application/json" })
+);
 
 app.use("/api/v1/payment/webhook", (req, res, next) => {
   console.log("Webhook Request Received");
@@ -78,7 +85,7 @@ app.use("/api/v1/doctor", doctorRouter);
 app.use('/api/v1/payment', paymentRouter);
 app.use('/api/v1/chat', chatRouter);
 app.use('/api/v1', couponRouter);
-app.use('/api/v1/shipping', shippingRouter);
+app.use('/api/v1/order', shippingRouter);
 
 // Multer error handler
 app.use((err, req, res, next) => {

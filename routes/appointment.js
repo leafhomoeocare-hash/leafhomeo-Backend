@@ -18,4 +18,5 @@ router.post('/submit-consultation', upload.array('screenshots', 5), authMiddlewa
 router.get('/consultation/:consultationId', authMiddleware, appointmentController.getConsultationById)
 router.get('/consultation/by-appointment/:appointmentId', authMiddleware, appointmentController.getConsultationByAppointmentId)
 router.put('/update-shipping-status/:appointmentId', authMiddleware, appointmentController.updateShippingStatus)
+router.get('/patient-past-consultations/:patientId', authMiddleware, appointmentController.getPatientPastConsultations)
 module.exports = router;

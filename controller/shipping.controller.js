@@ -3,7 +3,16 @@ const crypto = require('crypto');
 
 exports.handleShiprocketWebhook = async (req, res) => {
   try {
-    const webhookData = req.body;
+    // Parse raw body if it's a string
+    let webhookData = req.body;
+    if (typeof req.body === 'string') {
+      try {
+        webhookData = JSON.parse(req.body);
+      } catch (e) {
+        console.error('Error parsing webhook body:', e);
+        return res.status(400).json({ status: 0, message: 'Invalid JSON body' });
+      }
+    }
     console.log('Shiprocket Webhook received:', JSON.stringify(webhookData));
 
     // Secret Token Validation (Security Check)
