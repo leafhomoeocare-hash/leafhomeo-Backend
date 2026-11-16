@@ -12,8 +12,14 @@ const { VideoGrant } = AccessToken;
 const shiprocketService = require("../services/shiprocket.service");
 const sequelize = require("../config/database");
 
-// Parse "YYYY-MM-DD HH:mm:ss" as IST wall-clock time (server runs in UTC)
-const parseIST = (str) => new Date(String(str).trim().replace(' ', 'T') + '+05:30');
+// Parse "YYYY-MM-DD HH:mm:ss" as IST wall-clock time (server runs in UTC).
+// Date objects / timezone-aware strings are returned as-is.
+const parseIST = (str) => {
+  if (str instanceof Date) return str;
+  const s = String(str).trim();
+  const isWallTime = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(s) && !/[+-]\d{2}:?\d{2}$|Z$/i.test(s);
+  return new Date(isWallTime ? s.replace(' ', 'T') + '+05:30' : s);
+};
 
 exports.AvailabilitySlots = async (req,res,next )=>{
   try {
@@ -319,7 +325,7 @@ exports.AppointmentBooking = async (req, res, next) => {
         patientId,
         doctorId: requestType === "specific_doctor" ? doctorId : null,
         requestType,
-        appointmentDateTime,
+        appointmentDateTime: parseIST(appointmentDateTime),
         reason,
       },
       { transaction }
