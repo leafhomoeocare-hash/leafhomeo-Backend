@@ -3,9 +3,16 @@ const crypto = require('crypto');
 
 exports.handleShiprocketWebhook = async (req, res) => {
   try {
-    // Parse raw body if it's a string
+    // Parse raw body if it's a Buffer or string
     let webhookData = req.body;
-    if (typeof req.body === 'string') {
+    if (Buffer.isBuffer(req.body)) {
+      try {
+        webhookData = JSON.parse(req.body.toString('utf8'));
+      } catch (e) {
+        console.error('Error parsing webhook body:', e);
+        return res.status(400).json({ status: 0, message: 'Invalid JSON body' });
+      }
+    } else if (typeof req.body === 'string') {
       try {
         webhookData = JSON.parse(req.body);
       } catch (e) {
