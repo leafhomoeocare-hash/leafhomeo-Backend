@@ -45,6 +45,11 @@ exports.handleShiprocketWebhook = async (req, res) => {
       appointmentId = customOrderId.split('-')[1];
     }
 
+    if (!/^\d+$/.test(String(appointmentId))) {
+      console.log('Invalid appointment ID from webhook:', appointmentId);
+      return res.status(404).json({ status: 0, message: 'Appointment not found' });
+    }
+
     const appointment = await Appointment.findByPk(appointmentId);
 
     if (!appointment) {
