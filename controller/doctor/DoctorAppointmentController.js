@@ -983,7 +983,7 @@ exports.GetPublicDoctorProfile = async (req, res) => {
           {
             model: User,
             as: "user",
-            attributes: ["id", "name", "email", "mobile", "image"]
+            attributes: ["id", "name", "image"]
           }
         ]
       });
@@ -1001,7 +1001,7 @@ exports.GetPublicDoctorProfile = async (req, res) => {
           {
             model: User,
             as: "user",
-            attributes: ["id", "name", "email", "mobile", "image"],
+            attributes: ["id", "name", "image"],
             where: {
               [Op.or]: [
                 { name: { [Op.iLike]: `%${searchName}%` } },
@@ -1057,8 +1057,6 @@ exports.GetPublicDoctorProfile = async (req, res) => {
     const data = {
       id: doctor.id,
       name: doctor.user?.name,
-      email: doctor.user?.email,
-      mobile: doctor.user?.mobile,
       image: doctor.user?.image ? `http://localhost:5000/${doctor.user?.image}` : null,
       specialization: doctor.specialization,
       qualification: doctor.qualification,
