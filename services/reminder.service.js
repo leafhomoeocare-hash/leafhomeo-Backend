@@ -89,6 +89,11 @@ const sendAppointmentReminders = async () => {
     console.log(`Found ${appointments.length} appointments for tomorrow`);
 
     for (const appointment of appointments) {
+      if (!appointment.patient || !appointment.doctor) {
+        console.log(`Missing patient/doctor for appointment ${appointment.id}, skipping`);
+        continue;
+      }
+
       // Get patient and doctor user details
       const patient = await User.findByPk(appointment.patient.userId);
       const doctor = await User.findByPk(appointment.doctor.userId);
@@ -101,7 +106,7 @@ const sendAppointmentReminders = async () => {
       // Check if reminder already sent
       const existingReminder = await Notification.findOne({
         where: {
-          userId: patient.userId,
+          userId: patient.id,
           type: 'appointment_reminder',
           referenceId: appointment.id
         }
@@ -139,7 +144,7 @@ const sendAppointmentReminders = async () => {
 
       // Create notification
       await Notification.create({
-        userId: patient.userId,
+        userId: patient.id,
         senderId: doctor.id, // Doctor as sender
         title: 'Appointment Tomorrow',
         message: `Your appointment with Dr. ${doctor.name} is scheduled for tomorrow at ${formatISTTime(appointment.appointmentDateTime)}`,
@@ -195,6 +200,11 @@ const sendPaymentReminders = async () => {
     console.log(`Found ${appointments.length} unpaid appointments in 1 hour`);
 
     for (const appointment of appointments) {
+      if (!appointment.patient || !appointment.doctor) {
+        console.log(`Missing patient/doctor for appointment ${appointment.id}, skipping`);
+        continue;
+      }
+
       // Get patient and doctor user details
       const patient = await User.findByPk(appointment.patient.userId);
       const doctor = await User.findByPk(appointment.doctor.userId);
@@ -207,7 +217,7 @@ const sendPaymentReminders = async () => {
       // Check if reminder already sent
       const existingReminder = await Notification.findOne({
         where: {
-          userId: patient.userId,
+          userId: patient.id,
           type: 'payment_reminder',
           referenceId: appointment.id
         }
@@ -245,7 +255,7 @@ const sendPaymentReminders = async () => {
 
       // Create notification
       await Notification.create({
-        userId: patient.userId,
+        userId: patient.id,
         senderId: doctor.id, // Doctor as sender
         title: 'Payment Required',
         message: `Please complete payment for your appointment with Dr. ${doctor.name} starting in 1 hour`,
