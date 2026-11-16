@@ -12,6 +12,9 @@ const { VideoGrant } = AccessToken;
 const shiprocketService = require("../services/shiprocket.service");
 const sequelize = require("../config/database");
 
+// Parse "YYYY-MM-DD HH:mm:ss" as IST wall-clock time (server runs in UTC)
+const parseIST = (str) => new Date(String(str).trim().replace(' ', 'T') + '+05:30');
+
 exports.AvailabilitySlots = async (req,res,next )=>{
   try {
     const { doctorId, date } = req.body;
@@ -90,7 +93,7 @@ exports.AvailabilitySlots = async (req,res,next )=>{
     console.log("Booked appointments found:", appointments.length);
 
     const bookedSlots = appointments.map((a) => {
-      const d = new Date(a.appointmentDateTime);
+      const d = parseIST(a.appointmentDateTime);
       return d.toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
@@ -108,9 +111,7 @@ exports.AvailabilitySlots = async (req,res,next )=>{
 
     const slots = availability.map((item) => {
       // Parse slot time to check against buffer
-      const [hours, minutes] = item.startTime.split(':').map(Number);
-      const slotDateTime = new Date(selectedDate);
-      slotDateTime.setHours(hours, minutes, 0, 0);
+      const slotDateTime = parseIST(`${date} ${item.startTime}:00`);
 
       // Check if slot is within buffer time (both in IST)
       const isWithinBuffer = slotDateTime <= bufferTime;
@@ -223,7 +224,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       // Parse date as IST time (incoming format is "YYYY-MM-DD HH:mm:ss" in IST)
       // Database now stores IST directly without timezone conversion
-      const appointmentDate = new Date(appointmentDateTime);
+      const appointmentDate = parseIST(appointmentDateTime);
 
       // Use local day of week (not UTC) to match doctor's availability configuration
       const dayOfWeek = appointmentDate
@@ -294,7 +295,7 @@ exports.AppointmentBooking = async (req, res, next) => {
 
       // Check if any existing appointment has the same slot time
       for (const existing of existingAppointments) {
-        const existingSlotTime = new Date(existing.appointmentDateTime).toLocaleTimeString("en-GB", {
+        const existingSlotTime = parseIST(existing.appointmentDateTime).toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
           timeZone: "Asia/Kolkata"
