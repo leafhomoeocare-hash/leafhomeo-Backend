@@ -27,6 +27,32 @@ const sendEmail = async ({ to, subject, html }) => {
   }
 };
 
+// IST helpers - server runs in UTC, all appointment times are IST wall-clock
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const nowIST = () => new Date(Date.now() + IST_OFFSET_MS); // shifted clock: UTC fields = IST wall time
+
+// Returns [startUtc, endUtc] Date instants for an IST day `offsetDays` from today
+const istDayBounds = (offsetDays) => {
+  const n = nowIST();
+  const startWallUtc = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + offsetDays);
+  const startUtc = new Date(startWallUtc - IST_OFFSET_MS);
+  return [startUtc, new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1)];
+};
+
+// Returns [startUtc, endUtc] for the IST clock-hour that is `hoursAhead` from now
+const istHourBounds = (hoursAhead) => {
+  const t = new Date(nowIST().getTime() + hoursAhead * 60 * 60 * 1000);
+  const startWallUtc = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), t.getUTCHours());
+  const startUtc = new Date(startWallUtc - IST_OFFSET_MS);
+  return [startUtc, new Date(startUtc.getTime() + 60 * 60 * 1000 - 1)];
+};
+
+const formatISTTime = (date) =>
+  new Date(date).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+
+const formatISTDateTime = (date) =>
+  new Date(date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
 /**
  * Check and send appointment reminders
  * - 24 hours before appointment time
@@ -36,9 +62,7 @@ const sendAppointmentReminders = async () => {
     console.log('Checking appointment reminders...');
 
     const now = new Date();
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0));
-    const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999));
+    const [tomorrowStart, tomorrowEnd] = istDayBounds(1); // tomorrow in IST
 
     // Find appointments scheduled for tomorrow
     const appointments = await Appointment.findAll({
@@ -77,7 +101,7 @@ const sendAppointmentReminders = async () => {
       // Check if reminder already sent
       const existingReminder = await Notification.findOne({
         where: {
-          userId: patient.id,
+          userId: patient.userId,
           type: 'appointment_reminder',
           referenceId: appointment.id
         }
@@ -102,7 +126,7 @@ const sendAppointmentReminders = async () => {
             <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
               <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Reminder</h2>
               <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patient.name},</p>
-              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment with <strong style="color: #64a281;">Dr. ${doctor.name}</strong> is scheduled for tomorrow at <strong>${new Date(appointment.appointmentDateTime).toLocaleTimeString()}</strong>.</p>
+              <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment with <strong style="color: #64a281;">Dr. ${doctor.name}</strong> is scheduled for tomorrow at <strong>${formatISTTime(appointment.appointmentDateTime)}</strong>.</p>
               <p style="color: #374151; line-height: 1.6; font-size: 15px;">Please make sure to complete your payment before the consultation.</p>
               <div style="background: linear-gradient(135deg, #64a281 0%, #528f6e 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
                 <p style="margin: 0; font-weight: bold; font-size: 16px;">🌿 Natural Healing, Personalized Care</p>
@@ -115,10 +139,10 @@ const sendAppointmentReminders = async () => {
 
       // Create notification
       await Notification.create({
-        userId: patient.id,
+        userId: patient.userId,
         senderId: doctor.id, // Doctor as sender
         title: 'Appointment Tomorrow',
-        message: `Your appointment with Dr. ${doctor.name} is scheduled for tomorrow at ${new Date(appointment.appointmentDateTime).toLocaleTimeString()}`,
+        message: `Your appointment with Dr. ${doctor.name} is scheduled for tomorrow at ${formatISTTime(appointment.appointmentDateTime)}`,
         type: 'appointment_reminder',
         referenceId: appointment.id,
         isRead: false
@@ -142,9 +166,7 @@ const sendPaymentReminders = async () => {
     console.log('Checking payment reminders...');
 
     const now = new Date();
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-    const oneHourStart = new Date(oneHourLater.setMinutes(0, 0, 0));
-    const oneHourEnd = new Date(oneHourLater.setMinutes(59, 59, 999));
+    const [oneHourStart, oneHourEnd] = istHourBounds(1); // the IST clock-hour ~1h from now
 
     // Find appointments in 1 hour that are unpaid
     const appointments = await Appointment.findAll({
@@ -185,7 +207,7 @@ const sendPaymentReminders = async () => {
       // Check if reminder already sent
       const existingReminder = await Notification.findOne({
         where: {
-          userId: patient.id,
+          userId: patient.userId,
           type: 'payment_reminder',
           referenceId: appointment.id
         }
@@ -223,7 +245,7 @@ const sendPaymentReminders = async () => {
 
       // Create notification
       await Notification.create({
-        userId: patient.id,
+        userId: patient.userId,
         senderId: doctor.id, // Doctor as sender
         title: 'Payment Required',
         message: `Please complete payment for your appointment with Dr. ${doctor.name} starting in 1 hour`,
@@ -317,7 +339,7 @@ const cancelPendingAppointments = async () => {
                 <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
                   <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Cancelled</h2>
                   <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patientUser.name},</p>
-                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${new Date(appointment.appointmentDateTime).toLocaleString()}</strong> has been automatically cancelled as 30 minutes have passed since the scheduled time.</p>
+                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${formatISTDateTime(appointment.appointmentDateTime)}</strong> has been automatically cancelled as 30 minutes have passed since the scheduled time.</p>
                   <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
                     <p style="margin: 0; font-weight: bold; font-size: 16px;">⏰ 30-Minute Window Expired</p>
                   </div>
