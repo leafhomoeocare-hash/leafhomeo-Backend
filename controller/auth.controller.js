@@ -34,14 +34,7 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    // Phone verification should be done via VerifyPhoneOTP API before registration
-    // Trust the phoneVerified flag from frontend
-    if (!phoneVerified) {
-      return res.status(400).json({
-        status: 0,
-        message: "Please verify your phone number first using VerifyPhoneOTP API",
-      });
-    }
+    // Phone verification is done later during complete-profile flow
 
     // Format phone number to E.164 format for database
     let formattedMobile = mobile;
@@ -85,7 +78,7 @@ exports.register = async (req, res, next) => {
       mobile: formattedMobile, // Store formatted number
       password: hashedPassword,
       role: "patient",
-      isPhoneVerified: true,
+      isPhoneVerified: false,
       isEmailVerified: verifiedEmailStatus,
       termsAccepted: true,
     });
