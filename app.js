@@ -15,6 +15,7 @@ const Doctor = require("./models/Doctor");
 const Patient = require("./models/Patient");
 const Appointment = require("./models/Appointment");
 const Payment = require("./models/Payment");
+const Utility = require("./models/Utility");
 // const Prescription = require("./models/Prescription");
 const bodyParser = require("body-parser");
 const cron = require('node-cron');
@@ -108,8 +109,14 @@ app.use(function (req, res, next) {
 
 sequelize
   .authenticate()
-  .then(() => {
+  .then(async () => {
     console.log("✅ Database Connected Successfully");
+    // Auto-create only the utility table (anydoctorFee config) - safe, no-op if exists
+    await Utility.sync();
+    if ((await Utility.count()) === 0) {
+      await Utility.create({ anydoctorFee: 0 });
+    }
+    console.log("✅ Utility table ready");
   })
   .catch((error) => {
     console.error("❌ Database Connection Failed:", error);
