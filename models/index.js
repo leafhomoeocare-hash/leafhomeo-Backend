@@ -12,6 +12,7 @@ const TermsConditions = require('./termsconditions');
 const Consultation = require('./Consultation');
 const Coupon = require('./Coupon');
 const Blog = require('./Blog');
+const Utility = require('./Utility');
 /*
 
  User Relations with Doctor 
@@ -237,5 +238,6 @@ module.exports = {
   TermsConditions,
   Consultation,
   Coupon,
-  Blog
+  Blog,
+  Utility
 };

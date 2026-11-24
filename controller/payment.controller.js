@@ -1,5 +1,5 @@
 const Razorpay = require("../config/razorpay");
-const { Appointment, Doctor, Payment, Coupon } = require("../models");
+const { Appointment, Doctor, Payment, Coupon, Utility } = require("../models");
 
 const crypto = require("crypto");
 
@@ -61,7 +61,20 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    let amount = Number(appointment.doctor.consultationFee);
+    // Any Doctor bookings use fixed fee from utility table; specific doctor uses doctor's consultationFee
+    let amount;
+    if (appointment.requestType === "any_doctor") {
+      const utility = await Utility.findOne({ order: [["id", "DESC"]] });
+      if (!utility || !utility.anydoctorFee || Number(utility.anydoctorFee) <= 0) {
+        return res.status(400).json({
+          status: 0,
+          message: "Any Doctor consultation fee is not configured",
+        });
+      }
+      amount = Number(utility.anydoctorFee);
+    } else {
+      amount = Number(appointment.doctor.consultationFee);
+    }
     let discountAmount = 0;
     let appliedCoupon = null;
 
@@ -102,7 +115,7 @@ exports.createOrder = async (req, res) => {
     const payment = await Payment.create({
       appointmentId: appointment.id,
       amount,
-      originalAmount: appointment.doctor.consultationFee,
+      originalAmount: amount,
       discountAmount,
       couponId: appliedCoupon ? appliedCoupon.id : null,
       currency: "INR",
