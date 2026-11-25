@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { User, Doctor, Patient,Appointment,Payment, Availability,Review, Consultation, Notification} = require("../models");
+const { User, Doctor, Patient,Appointment,Payment, Availability,Review, Consultation, Notification, Utility} = require("../models");
 const { Op } = require("sequelize");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
@@ -630,6 +630,13 @@ exports.myAppointments = async (req, res) => {
       offset
     });
 
+    // Any Doctor appointments use fixed fee from utility table
+    let anyDoctorFee = null;
+    if (appointments.some((a) => a.requestType === "any_doctor")) {
+      const utility = await Utility.findOne({ order: [["id", "DESC"]] });
+      anyDoctorFee = utility ? Number(utility.anydoctorFee) : null;
+    }
+
     const result = appointments.map(item => ({
       id: item.id,
       doctorUserId: item.doctor?.userId || null,
@@ -639,7 +646,7 @@ exports.myAppointments = async (req, res) => {
       appointmentDateTime: item.appointmentDateTime,
       appointmentId: item.appointmentId,
       reason: item.reason,
-      consultationFee: item.doctor?.consultationFee || null,
+      consultationFee: item.requestType === "any_doctor" ? anyDoctorFee : (item.doctor?.consultationFee || null),
       requestType: item.requestType,
       specialization: item.doctor?.specialization || null,
       experience: item.doctor?.experience || null,
