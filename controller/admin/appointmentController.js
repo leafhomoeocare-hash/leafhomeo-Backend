@@ -16,7 +16,18 @@ exports.GetAppointments = async (req, res, next) => {
     const page = parseInt(req.body.page) || 1;
     const limit = parseInt(req.body.limit) || 10;
     const search = req.body.search ? req.body.search.trim() : "";
+    const status = req.body.status ? req.body.status.trim().toLowerCase() : "";
     const offset = (page - 1) * limit;
+
+    // Status groups matching frontend tabs
+    const statusGroupMap = {
+      cancelled: ["cancelled", "rejected"],
+      accepted: ["accepted", "confirmed"],
+      pending: ["pending", "payment_pending"],
+    };
+    const statusFilterValues = status && status !== "all"
+      ? (statusGroupMap[status] || [status])
+      : null;
 
     const { count, rows } = await Appointment.findAndCountAll({
       include: [
@@ -56,16 +67,23 @@ exports.GetAppointments = async (req, res, next) => {
         },
       ],
       // 2. Dynamic Search Path adjusted as per your exact aliases
-      where: search
-        ? {
+      where: (() => {
+        const conditions = [];
+        if (search) {
+          conditions.push({
             [Op.or]: [
               { "$patient.user.name$": { [Op.iLike]: `%${search}%` } },
               { "$patient.user.mobile$": { [Op.iLike]: `%${search}%` } },
               { "$doctor.user.name$": { [Op.iLike]: `%${search}%` } },
               { appointmentId: { [Op.iLike]: `%${search}%` } },
             ],
-          }
-        : undefined,
+          });
+        }
+        if (statusFilterValues) {
+          conditions.push({ status: { [Op.in]: statusFilterValues } });
+        }
+        return conditions.length ? { [Op.and]: conditions } : undefined;
+      })(),
       order: [["appointmentDateTime", "DESC"]],
       limit,
       offset,
@@ -142,6 +160,21 @@ exports.GetAppointments = async (req, res, next) => {
         : null,
     }));
     console.log(appointments,"appointmenT");
+
+    // Status counts for filter pills (grouped like frontend tabs)
+    const statusCountRows = await Appointment.findAll({
+      attributes: ["status", [Appointment.sequelize.fn("COUNT", Appointment.sequelize.col("id")), "count"]],
+      group: ["status"],
+      raw: true,
+    });
+    const statusCounts = { all: 0, pending: 0, accepted: 0, paid: 0, completed: 0, cancelled: 0 };
+    statusCountRows.forEach((row) => {
+      const s = (row.status || "").toLowerCase();
+      const count = parseInt(row.count, 10) || 0;
+      statusCounts.all += count;
+      const group = statusGroupMap[s] ? Object.keys(statusGroupMap).find((k) => statusGroupMap[k].includes(s)) : s;
+      if (statusCounts[group] !== undefined) statusCounts[group] += count;
+    });
   
     return res.status(200).json({
       status: 1,
@@ -151,6 +184,7 @@ exports.GetAppointments = async (req, res, next) => {
         totalRecords,
         totalPages,
         currentPage: page,
+        statusCounts,
       },
     });
   } catch (error) {
