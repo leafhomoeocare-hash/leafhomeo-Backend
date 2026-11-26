@@ -47,17 +47,18 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // Check if payment already exists
+    // Check if payment already completed - pending/failed payments can be retried
     const existingPayment = await Payment.findOne({
       where: {
         appointmentId: appointment.id,
+        status: "paid",
       },
     });
 
     if (existingPayment) {
       return res.status(400).json({
         status: 0,
-        message: "Payment already initiated for this appointment",
+        message: "Payment already completed for this appointment",
       });
     }
 
@@ -111,6 +112,14 @@ exports.createOrder = async (req, res) => {
     };
 
     const order = await Razorpay.orders.create(options);
+
+    // Remove stale pending/failed payments so retries don't pile up
+    await Payment.destroy({
+      where: {
+        appointmentId: appointment.id,
+        status: ["pending", "failed"],
+      },
+    });
 
     const payment = await Payment.create({
       appointmentId: appointment.id,
