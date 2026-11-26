@@ -783,8 +783,18 @@ exports.GetVideoToken = async (req, res) => {
     // Retrieve the appointment along with patient & doctor user references
     const appointment = await Appointment.findByPk(appointmentId, {
       include: [
-        { model: Patient, as: "patient", attributes: ["id", "userId"] },
-        { model: Doctor, as: "doctor", attributes: ["id", "userId"] }
+        {
+          model: Patient,
+          as: "patient",
+          attributes: ["id", "userId"],
+          include: [{ model: User, as: "user", attributes: ["name"] }],
+        },
+        {
+          model: Doctor,
+          as: "doctor",
+          attributes: ["id", "userId"],
+          include: [{ model: User, as: "user", attributes: ["name"] }],
+        },
       ]
     });
 
@@ -872,7 +882,10 @@ exports.GetVideoToken = async (req, res) => {
         token: jwtToken,
         roomName: appointment.roomName,
         role: isDoctor ? "doctor" : "patient",
-        identity: uniqueIdentity
+        identity: uniqueIdentity,
+        otherPartyName: isDoctor
+          ? appointment.patient?.user?.name || null
+          : appointment.doctor?.user?.name || null,
       }
     });
 
