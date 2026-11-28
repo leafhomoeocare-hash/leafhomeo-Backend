@@ -410,12 +410,112 @@ const cancelPendingAppointments = async () => {
 };
 
 /**
+ * Call-time push reminders for paid appointments:
+ * - ~10 minutes before: video call window opens
+ * - At appointment time: consultation is starting now
+ */
+const sendCallReminders = async () => {
+  try {
+    const now = Date.now();
+    const TEN_MIN = 10 * 60 * 1000;
+
+    // Window 1: appointment starts in ~5-15 min (fires once thanks to dedupe)
+    const upcoming = await Appointment.findAll({
+      where: {
+        appointmentDateTime: {
+          [Op.gte]: new Date(now + 5 * 60 * 1000),
+          [Op.lte]: new Date(now + 15 * 60 * 1000),
+        },
+        status: 'paid',
+      },
+      include: [
+        { model: Patient, as: 'patient', attributes: ['id', 'userId'] },
+        { model: Doctor, as: 'doctor', attributes: ['id', 'userId'] },
+      ],
+    });
+
+    // Window 2: appointment started within last ~10 min
+    const starting = await Appointment.findAll({
+      where: {
+        appointmentDateTime: {
+          [Op.gte]: new Date(now - TEN_MIN),
+          [Op.lte]: new Date(now),
+        },
+        status: 'paid',
+      },
+      include: [
+        { model: Patient, as: 'patient', attributes: ['id', 'userId'] },
+        { model: Doctor, as: 'doctor', attributes: ['id', 'userId'] },
+      ],
+    });
+
+    const sendCallPush = async (appointment, patient, doctor, type, title, body) => {
+      const existing = await Notification.findOne({
+        where: { userId: patient.id, type, referenceId: appointment.id },
+      });
+      if (existing) return;
+
+      await Notification.create({
+        userId: patient.id,
+        senderId: doctor?.id || null,
+        title,
+        message: body,
+        type,
+        referenceId: appointment.id,
+        isRead: false,
+      });
+
+      if (patient.fcmToken) {
+        try {
+          await admin.messaging().send({
+            token: patient.fcmToken,
+            notification: { title, body },
+            data: { type, referenceId: String(appointment.id) },
+          });
+        } catch (pushErr) {
+          console.error(`FCM push error (${type}):`, pushErr.message);
+        }
+      }
+    };
+
+    for (const appointment of upcoming) {
+      if (!appointment.patient) continue;
+      const patient = await User.findByPk(appointment.patient.userId);
+      const doctor = appointment.doctor ? await User.findByPk(appointment.doctor.userId) : null;
+      if (!patient) continue;
+      await sendCallPush(
+        appointment, patient, doctor,
+        'call_window_reminder',
+        'Video Call Starting Soon',
+        `Your video consultation with Dr. ${doctor?.name || 'your doctor'} starts at ${formatISTTime(appointment.appointmentDateTime)}. Join the call now!`
+      );
+    }
+
+    for (const appointment of starting) {
+      if (!appointment.patient) continue;
+      const patient = await User.findByPk(appointment.patient.userId);
+      const doctor = appointment.doctor ? await User.findByPk(appointment.doctor.userId) : null;
+      if (!patient) continue;
+      await sendCallPush(
+        appointment, patient, doctor,
+        'appointment_starting',
+        'Your Appointment is Starting',
+        `Your consultation with Dr. ${doctor?.name || 'your doctor'} is starting now. Please join the video call.`
+      );
+    }
+  } catch (error) {
+    console.error('Error sending call reminders:', error);
+  }
+};
+
+/**
  * Run all reminder checks
  */
 const runReminderChecks = async () => {
   console.log('Running reminder checks at:', new Date().toISOString());
   await sendAppointmentReminders();
   await sendPaymentReminders();
+  await sendCallReminders();
   await cancelPendingAppointments();
   console.log('Reminder checks completed');
 };
@@ -423,6 +523,7 @@ const runReminderChecks = async () => {
 module.exports = {
   sendAppointmentReminders,
   sendPaymentReminders,
+  sendCallReminders,
   cancelPendingAppointments,
   runReminderChecks
 };
