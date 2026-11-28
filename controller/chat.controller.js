@@ -986,6 +986,7 @@ exports.sendMessage = async (req, res) => {
               type: "chat_message",
               senderId: String(currentUserId),
               appointmentId: chatMessage.appointmentId ? String(chatMessage.appointmentId) : "",
+              referenceId: String(chatMessage.id),
             },
           });
           console.log(`🔔 Push notification sent to patient ${receiverUser.id}`);

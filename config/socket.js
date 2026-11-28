@@ -192,6 +192,7 @@ const initSocket = (server) => {
                   type: "chat_message",
                   senderId: String(userId),
                   appointmentId: chatMessage.appointmentId ? String(chatMessage.appointmentId) : "",
+                  referenceId: String(chatMessage.id),
                 },
               });
               console.log(`🔔 Push notification sent to patient ${numericReceiverId}`);

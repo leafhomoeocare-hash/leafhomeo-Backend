@@ -278,6 +278,10 @@ if (patientUser && patientUser.fcmToken) {
         title: "Appointment Confirmed",
         body: `Dr. ${doctorUser.name} has accepted your appointment. Please complete your payment to confirm your consultation.`,
       },
+      data: {
+        type: "appointment_accepted",
+        referenceId: String(appointment.id),
+      },
     });
 
     console.log("Push notification sent successfully");

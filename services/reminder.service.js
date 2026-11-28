@@ -1,6 +1,7 @@
 const { Appointment, Patient, Doctor, Notification, User ,Payment} = require('../models');
 const { Op } = require('sequelize');
 const nodemailer = require('nodemailer');
+const admin = require('../config/firebase');
 
 // Email transporter setup
 const transporter = nodemailer.createTransport({
@@ -153,6 +154,25 @@ const sendAppointmentReminders = async () => {
         isRead: false
       });
 
+      // FCM push notification
+      if (patient.fcmToken) {
+        try {
+          await admin.messaging().send({
+            token: patient.fcmToken,
+            notification: {
+              title: 'Appointment Tomorrow',
+              body: `Your appointment with Dr. ${doctor.name} is tomorrow at ${formatISTTime(appointment.appointmentDateTime)}`,
+            },
+            data: {
+              type: 'appointment_reminder',
+              referenceId: String(appointment.id),
+            },
+          });
+        } catch (pushErr) {
+          console.error('FCM push error (appointment reminder):', pushErr.message);
+        }
+      }
+
       console.log(`Appointment reminder sent for appointment ${appointment.id}`);
     }
 
@@ -263,6 +283,25 @@ const sendPaymentReminders = async () => {
         referenceId: appointment.id,
         isRead: false
       });
+
+      // FCM push notification
+      if (patient.fcmToken) {
+        try {
+          await admin.messaging().send({
+            token: patient.fcmToken,
+            notification: {
+              title: 'Payment Required',
+              body: `Please complete payment for your appointment with Dr. ${doctor.name} starting in 1 hour`,
+            },
+            data: {
+              type: 'payment_reminder',
+              referenceId: String(appointment.id),
+            },
+          });
+        } catch (pushErr) {
+          console.error('FCM push error (payment reminder):', pushErr.message);
+        }
+      }
 
       console.log(`Payment reminder sent for appointment ${appointment.id}`);
     }
