@@ -401,6 +401,22 @@ exports.UpdateProfile = async (req, res) => {
       });
     }
 
+    // All profile fields are mandatory
+    const missingFields = [
+      ["gender", gender], ["date of birth", dob], ["house number", houseNumber],
+      ["address line 1", addressLine1], ["address line 2", addressLine2],
+      ["landmark", landmark], ["city", city], ["state", state],
+      ["pincode", pincode], ["country", country],
+    ].filter(([, v]) => !v || !String(v).trim()).map(([k]) => k);
+
+    if (missingFields.length) {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 0,
+        message: `Please fill all required fields: ${missingFields.join(", ")}`,
+      });
+    }
+
     const user = await User.findByPk(userId, {
       where: { isDeleted: false },
       transaction
@@ -520,6 +536,22 @@ exports.CompleteProfile = async (req, res) => {
       pincode,
       country,
     } = req.body;
+
+    // All profile fields are mandatory
+    const missingFields = [
+      ["gender", gender], ["date of birth", dob], ["house number", houseNumber],
+      ["address line 1", addressLine1], ["address line 2", addressLine2],
+      ["landmark", landmark], ["city", city], ["state", state],
+      ["pincode", pincode], ["country", country],
+    ].filter(([, v]) => !v || !String(v).trim()).map(([k]) => k);
+
+    if (missingFields.length) {
+      await transaction.rollback();
+      return res.status(400).json({
+        status: 0,
+        message: `Please fill all required fields: ${missingFields.join(", ")}`,
+      });
+    }
 
     const user = await User.findByPk(userId, {
       where: { isDeleted: false },
