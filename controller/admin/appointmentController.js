@@ -88,7 +88,7 @@ exports.GetAppointments = async (req, res, next) => {
       order: [
         [
           Appointment.sequelize.literal(
-            `CASE WHEN status = 'completed' OR ("appointmentDateTime" AT TIME ZONE 'Asia/Kolkata')::date = (now() AT TIME ZONE 'Asia/Kolkata')::date THEN 0 ELSE 1 END`
+            `CASE WHEN "Appointment"."status" = 'completed' OR ("Appointment"."appointmentDateTime" AT TIME ZONE 'Asia/Kolkata')::date = (now() AT TIME ZONE 'Asia/Kolkata')::date THEN 0 ELSE 1 END`
           ),
           "ASC",
         ],
