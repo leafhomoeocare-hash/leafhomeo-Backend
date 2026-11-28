@@ -319,18 +319,20 @@ const sendPaymentReminders = async () => {
  */
 const cancelPendingAppointments = async () => {
   try {
-    console.log('Checking pending/accepted/paid appointments for cancellation...');
+    console.log('Checking unpaid appointments for 3-hour auto-cancellation...');
 
     const now = new Date();
+    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
-    // Get pending, payment_pending, accepted, and paid appointments that are 30 minutes past their time
+    // Unpaid appointments (pending/payment_pending/accepted) starting within the next 3 hours
+    // or already past - auto-cancel since payment was not completed in time
     const appointments = await Appointment.findAll({
       where: {
         status: {
-          [Op.in]: ['pending', 'payment_pending', 'accepted', 'paid']
+          [Op.in]: ['pending', 'payment_pending', 'accepted']
         },
         appointmentDateTime: {
-          [Op.lt]: new Date(now.getTime() - 30 * 60 * 1000) // 30 minutes ago
+          [Op.lte]: new Date(now.getTime() + THREE_HOURS_MS)
         }
       },
       include: [
@@ -359,7 +361,7 @@ const cancelPendingAppointments = async () => {
 
       // Send notification to patient
       if (appointment.patient) {
-        const message = 'Your appointment has been automatically cancelled as 30 minutes have passed since the scheduled time.';
+        const message = 'Your appointment has been automatically cancelled as payment was not completed 3 hours before the scheduled time.';
 
         // Skip notification creation (requires DB migration for senderId nullable)
         // await Notification.create({
@@ -388,9 +390,9 @@ const cancelPendingAppointments = async () => {
                 <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
                   <h2 style="color: #145656; margin-top: 0; font-size: 22px; font-weight: bold;">Appointment Cancelled</h2>
                   <p style="color: #374151; line-height: 1.6; font-size: 15px;">Dear ${patientUser.name},</p>
-                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${formatISTDateTime(appointment.appointmentDateTime)}</strong> has been automatically cancelled as 30 minutes have passed since the scheduled time.</p>
+                  <p style="color: #374151; line-height: 1.6; font-size: 15px;">Your appointment scheduled for <strong>${formatISTDateTime(appointment.appointmentDateTime)}</strong> has been automatically cancelled as payment was not completed 3 hours before the scheduled time.</p>
                   <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
-                    <p style="margin: 0; font-weight: bold; font-size: 16px;">⏰ 30-Minute Window Expired</p>
+                    <p style="margin: 0; font-weight: bold; font-size: 16px;">⏰ Payment Window Expired</p>
                   </div>
                   <p style="color: #6b7280; margin-bottom: 0; font-size: 14px;">Please book a new appointment at your convenience.<br><strong style="color: #145656;">Leaf Homeo Team</strong></p>
                 </div>

@@ -7,7 +7,7 @@ const Payment = require("../../models/Payment");
 exports.GetDashboardStats = async (req, res, next) => {
   try {
     // 1. Get Total Patients Count
-    const totalPatients = await Patient.count();
+    const totalPatients = await Patient.count({ where: { isDeleted: false } });
 
     // 2. Get Active Doctors Count (where associated User is active)
     const activeDoctors = await Doctor.count({
