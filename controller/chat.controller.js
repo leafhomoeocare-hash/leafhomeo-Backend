@@ -987,6 +987,7 @@ exports.sendMessage = async (req, res) => {
               senderId: String(currentUserId),
               appointmentId: chatMessage.appointmentId ? String(chatMessage.appointmentId) : "",
               referenceId: String(chatMessage.id),
+              senderImage: sender?.image ? `${process.env.API_URL || 'http://localhost:5000'}/${sender.image}` : "",
             },
           });
           console.log(`🔔 Push notification sent to patient ${receiverUser.id}`);
