@@ -2,6 +2,7 @@ const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
 const { ChatMessage, User, Appointment, Patient, Doctor } = require("../models");
 const { Op } = require("sequelize");
+const admin = require("./firebase");
 
 // Rate limiting store (in-memory for simplicity, use Redis in production)
 const rateLimitStore = new Map();
@@ -174,6 +175,31 @@ const initSocket = (server) => {
         // Emit to receiver's private room
         const receiverRoom = `user_${numericReceiverId}`;
         io.to(receiverRoom).emit("receive_message", formattedMessage);
+
+        // Push notification: doctor/admin -> patient chat message
+        try {
+          if ((socket.user.role === "doctor" || socket.user.role === "admin") && sender) {
+            const receiverUser = await User.findByPk(numericReceiverId, { attributes: ["id", "role", "fcmToken"] });
+            if (receiverUser && receiverUser.role === "patient" && receiverUser.fcmToken) {
+              const preview = chatMessage.message || (chatMessage.attachmentUrl ? "Sent an attachment" : "New message");
+              await admin.messaging().send({
+                token: receiverUser.fcmToken,
+                notification: {
+                  title: `${socket.user.role === "admin" ? "Support" : "Dr. " + sender.name}: New Message`,
+                  body: preview.length > 100 ? preview.slice(0, 100) + "..." : preview,
+                },
+                data: {
+                  type: "chat_message",
+                  senderId: String(userId),
+                  appointmentId: chatMessage.appointmentId ? String(chatMessage.appointmentId) : "",
+                },
+              });
+              console.log(`🔔 Push notification sent to patient ${numericReceiverId}`);
+            }
+          }
+        } catch (pushErr) {
+          console.error("FCM push error (socket):", pushErr.message);
+        }
 
         console.log(`✉️ Message sent from ${userId} to ${numericReceiverId}`);
 

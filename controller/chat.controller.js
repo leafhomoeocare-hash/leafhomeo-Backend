@@ -1,6 +1,7 @@
 const { ChatMessage, User, Appointment, Doctor, Patient } = require("../models");
 const { Op, literal, fn, col } = require("sequelize");
 const sequelize = require("../config/database").sequelize;
+const admin = require("../config/firebase");
 const { upload, getFileType } = require("../middleware/multer");
 
 // Get chat history for a specific appointment (admin monitoring)
@@ -968,6 +969,31 @@ exports.sendMessage = async (req, res) => {
         image: sender.image
       } : null
     };
+
+    // Push notification: doctor/admin -> patient chat message
+    try {
+      if ((req.user.role === "doctor" || req.user.role === "admin") && sender) {
+        const receiverUser = await User.findByPk(parseInt(receiverId, 10), { attributes: ["id", "role", "fcmToken"] });
+        if (receiverUser && receiverUser.role === "patient" && receiverUser.fcmToken) {
+          const preview = chatMessage.message || (chatMessage.attachmentUrl ? "Sent an attachment" : "New message");
+          await admin.messaging().send({
+            token: receiverUser.fcmToken,
+            notification: {
+              title: `${req.user.role === "admin" ? "Support" : "Dr. " + sender.name}: New Message`,
+              body: preview.length > 100 ? preview.slice(0, 100) + "..." : preview,
+            },
+            data: {
+              type: "chat_message",
+              senderId: String(currentUserId),
+              appointmentId: chatMessage.appointmentId ? String(chatMessage.appointmentId) : "",
+            },
+          });
+          console.log(`🔔 Push notification sent to patient ${receiverUser.id}`);
+        }
+      }
+    } catch (pushErr) {
+      console.error("FCM push error (REST):", pushErr.message);
+    }
 
     return res.status(200).json({
       status: 1,
