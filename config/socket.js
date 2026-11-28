@@ -193,7 +193,7 @@ const initSocket = (server) => {
                   senderId: String(userId),
                   appointmentId: chatMessage.appointmentId ? String(chatMessage.appointmentId) : "",
                   referenceId: String(chatMessage.id),
-                  senderImage: sender?.image ? `${process.env.API_URL || 'http://localhost:5000'}/${sender.image}` : "",
+                  senderImage: sender?.image || "",
                 },
               });
               console.log(`🔔 Push notification sent to patient ${numericReceiverId}`);
