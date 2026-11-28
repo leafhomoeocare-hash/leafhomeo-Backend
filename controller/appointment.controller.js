@@ -189,6 +189,17 @@ exports.AppointmentBooking = async (req, res, next) => {
       });
     }
 
+    // Mobile number verification is mandatory before booking
+    const patientUser = await User.findByPk(userId, { attributes: ["isPhoneVerified"] });
+    if (!patientUser || !patientUser.isPhoneVerified) {
+      await transaction.rollback();
+      console.log("ERROR: Phone number not verified");
+      return res.status(403).json({
+        status: 0,
+        message: "Please verify your mobile number before booking an appointment",
+      });
+    }
+
     const patientId = patient.id;
     const { doctorId, requestType, appointmentDateTime, reason } = req.body;
 
