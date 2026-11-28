@@ -507,7 +507,7 @@ exports.UpcomingAppointments = async (req, res) => {
         item.doctor?.user?.name,
 
       doctorImage:
-        item.doctor?.user?.image ? `http://localhost:5000/${item.doctor?.user?.image}` : null,
+        item.doctor?.user?.image ? `${process.env.API_URL || 'http://localhost:5000'}/${item.doctor?.user?.image}` : null,
 
       specialization:
         item.doctor?.specialization,
@@ -641,7 +641,7 @@ exports.myAppointments = async (req, res) => {
       id: item.id,
       doctorUserId: item.doctor?.userId || null,
       doctorName: item.doctor?.user?.name || null,
-      doctorImage: item.doctor?.user?.image ? `http://localhost:5000/${item.doctor?.user?.image}` : null,
+      doctorImage: item.doctor?.user?.image ? `${process.env.API_URL || 'http://localhost:5000'}/${item.doctor?.user?.image}` : null,
       status: item.status,
       appointmentDateTime: item.appointmentDateTime,
       appointmentId: item.appointmentId,
