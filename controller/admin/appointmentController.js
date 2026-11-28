@@ -84,7 +84,16 @@ exports.GetAppointments = async (req, res, next) => {
         }
         return conditions.length ? { [Op.and]: conditions } : undefined;
       })(),
-      order: [["appointmentDateTime", "DESC"]],
+      // Completed appointments and today's appointments (IST) show first for the prepare team
+      order: [
+        [
+          Appointment.sequelize.literal(
+            `CASE WHEN status = 'completed' OR ("appointmentDateTime" AT TIME ZONE 'Asia/Kolkata')::date = (now() AT TIME ZONE 'Asia/Kolkata')::date THEN 0 ELSE 1 END`
+          ),
+          "ASC",
+        ],
+        ["appointmentDateTime", "DESC"],
+      ],
       limit,
       offset,
       distinct: true,
